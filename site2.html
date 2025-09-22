@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechVision Corp - Innovation & Excellence</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --secondary: #8b5cf6;
+            --accent: #ec4899;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            color: var(--light);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Header avec effet glassmorphism */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 5%;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-item {
+            position: relative;
+        }
+
+        .nav-item > a {
+            color: var(--light);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item > a::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent);
+            transition: width 0.3s ease;
+        }
+
+        .nav-item:hover > a::before {
+            width: 100%;
+        }
+
+        .nav-item:hover > a {
+            color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        /* Sous-menu avec animation */
+        .dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-20px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            min-width: 200px;
+        }
+
+        .nav-item:hover .dropdown {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(10px);
+        }
+
+        .dropdown a {
+            display: block;
+            padding: 0.8rem 1.2rem;
+            color: var(--light);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .dropdown a:hover {
+            background: rgba(139, 92, 246, 0.2);
+            transform: translateX(5px);
+        }
+
+        /* Sidebars */
+        .sidebar {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 120px;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            z-index: 100;
+            transition: all 0.3s ease;
+            animation: fadeIn 1s ease-out 0.5s both;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50%) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(-50%) scale(1);
+            }
+        }
+
+        .sidebar-left {
+            left: 10px;
+        }
+
+        .sidebar-right {
+            right: 10px;
+        }
+
+        .sidebar:hover {
+            transform: translateY(-50%) scale(1.05);
+            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3);
+        }
+
+        .ad-space {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .ad-space:hover {
+            transform: scale(1.05);
+            border-color: var(--accent);
+            box-shadow: 0 5px 20px rgba(236, 72, 153, 0.3);
+        }
+
+        /* Hero Section avec Canvas Three.js */
+        .hero {
+            margin-top: 80px;
+            padding: 2rem 5%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .hero-title {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease-in-out infinite;
+            text-align: center;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero-subtitle {
+            font-size: 1.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        /* Container 3D */
+        #carousel-container {
+            width: 100%;
+            height: 500px;
+            position: relative;
+            margin: 2rem 0;
+        }
+
+        .carousel-controls {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 2rem;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .carousel-btn {
+            background: rgba(139, 92, 246, 0.8);
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            pointer-events: all;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 5px 20px rgba(139, 92, 246, 0.4);
+        }
+
+        .carousel-btn:hover {
+            transform: scale(1.1);
+            background: var(--accent);
+            box-shadow: 0 8px 30px rgba(236, 72, 153, 0.5);
+        }
+
+        .carousel-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Sections supplémentaires */
+        .features {
+            padding: 4rem 5%;
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(10px);
+            margin: 2rem 0;
+            border-radius: 20px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .feature-card {
+            background: rgba(51, 65, 85, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, transparent, rgba(139, 92, 246, 0.1));
+            transform: translateX(-100%);
+            transition: transform 0.5s ease;
+        }
+
+        .feature-card:hover::before {
+            transform: translateX(0);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+            border-color: var(--secondary);
+        }
+
+        /* Footer */
+        footer {
+            background: rgba(15, 23, 42, 0.9);
+            padding: 3rem 5%;
+            margin-top: 4rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-section h3 {
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .footer-section a {
+            display: block;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            padding: 0.3rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .footer-section a:hover {
+            color: var(--accent);
+            transform: translateX(5px);
+        }
+
+        /* Popups */
+        .popup {
+            position: fixed;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .popup.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .cookie-popup {
+            bottom: 20px;
+            left: 20px;
+            max-width: 400px;
+        }
+
+        .newsletter-popup {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            min-width: 400px;
+        }
+
+        .newsletter-popup.active {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .popup-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(236, 72, 153, 0.8);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .popup-close:hover {
+            background: var(--accent);
+            transform: rotate(90deg) scale(1.1);
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+            font-size: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-primary:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Animations supplémentaires */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-menu {
+                flex-direction: column;
+                position: fixed;
+                left: -100%;
+                top: 70px;
+                width: 100%;
+                background: rgba(15, 23, 42, 0.95);
+                backdrop-filter: blur(20px);
+                transition: 0.3s;
+            }
+
+            .nav-menu.active {
+                left: 0;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .hero-title {
+                font-size: 2.5rem;
+            }
+
+            #carousel-container {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header avec navigation -->
+    <header>
+        <nav>
+            <div class="logo">TechVision Corp</div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#accueil">Accueil</a>
+                    <div class="dropdown">
+                        <a href="#presentation">Présentation</a>
+                        <a href="#mission">Notre Mission</a>
+                        <a href="#vision">Notre Vision</a>
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <a href="#services">Services</a>
+                    <div class="dropdown">
+                        <a href="#consulting">Consulting</a>
+                        <a href="#development">Développement</a>
+                        <a href="#integration">Intégration</a>
+                        <a href="#support">Support</a>
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <a href="#produits">Produits</a>
+                    <div class="dropdown">
+                        <a href="#logiciels">Logiciels</a>
+                        <a href="#applications">Applications</a>
+                        <a href="#solutions">Solutions Cloud</a>
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <a href="#apropos">À Propos</a>
+                    <div class="dropdown">
+                        <a href="#equipe">Notre Équipe</a>
+                        <a href="#histoire">Notre Histoire</a>
+                        <a href="#valeurs">Nos Valeurs</a>
+                        <a href="#partenaires">Partenaires</a>
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <a href="#contact">Contact</a>
+                    <div class="dropdown">
+                        <a href="#formulaire">Formulaire</a>
+                        <a href="#bureaux">Nos Bureaux</a>
+                        <a href="#support">Support Client</a>
+                    </div>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Sidebars -->
+    <aside class="sidebar sidebar-left">
+        <div class="ad-space">
+            <p>Publicité</p>
+            <small>Espace Premium</small>
+        </div>
+        <div class="ad-space">
+            <p>Offre Spéciale</p>
+            <small>-30% ce mois</small>
+        </div>
+    </aside>
+
+    <aside class="sidebar sidebar-right">
+        <div class="ad-space">
+            <p>Newsletter</p>
+            <small>Inscrivez-vous</small>
+        </div>
+        <div class="ad-space">
+            <p>Webinaire</p>
+            <small>Jeudi 14h</small>
+        </div>
+    </aside>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1 class="hero-title floating">Innovation & Excellence</h1>
+        <p class="hero-subtitle">Transformez votre vision en réalité digitale</p>
+        
+        <!-- Container pour le carrousel 3D -->
+        <div id="carousel-container">
+            <div class="carousel-controls">
+                <button class="carousel-btn" id="prevBtn">‹</button>
+                <button class="carousel-btn" id="nextBtn">›</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 2rem;">Nos Services</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <h3>Innovation</h3>
+                <p>Solutions technologiques de pointe pour transformer votre entreprise</p>
+            </div>
+            <div class="feature-card">
+                <h3>Performance</h3>
+                <p>Optimisation maximale pour des résultats exceptionnels</p>
+            </div>
+            <div class="feature-card">
+                <h3>Sécurité</h3>
+                <p>Protection avancée de vos données et infrastructures</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Entreprise</h3>
+                <a href="#">À propos</a>
+                <a href="#">Carrières</a>
+                <a href="#">Presse</a>
+                <a href="#">Blog</a>
+            </div>
+            <div class="footer-section">
+                <h3>Services</h3>
+                <a href="#">Consulting</a>
+                <a href="#">Développement</a>
+                <a href="#">Formation</a>
+                <a href="#">Support</a>
+            </div>
+            <div class="footer-section">
+                <h3>Ressources</h3>
+                <a href="#">Documentation</a>
+                <a href="#">API</a>
+                <a href="#">Tutoriels</a>
+                <a href="#">FAQ</a>
+            </div>
+            <div class="footer-section">
+                <h3>Contact</h3>
+                <a href="#">Email</a>
+                <a href="#">Téléphone</a>
+                <a href="#">LinkedIn</a>
+                <a href="#">Twitter</a>
+            </div>
+        </div>
+        <div style="text-align: center; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);">
+            <p>© 2024 TechVision Corp. Tous droits réservés.</p>
+        </div>
+    </footer>
+
+    <!-- Popups -->
+    <div class="overlay" id="overlay"></div>
+    
+    <div class="popup cookie-popup" id="cookiePopup">
+        <button class="popup-close" onclick="closePopup('cookiePopup')">×</button>
+        <h3>🍪 Cookies</h3>
+        <p>Nous utilisons des cookies pour améliorer votre expérience.</p>
+        <button class="btn-primary" onclick="closePopup('cookiePopup')">Accepter</button>
+    </div>
+
+    <div class="popup newsletter-popup" id="newsletterPopup">
+        <button class="popup-close" onclick="closePopup('newsletterPopup')">×</button>
+        <h3>📬 Newsletter</h3>
+        <p>Restez informé de nos dernières innovations!</p>
+        <input type="email" placeholder="Votre email" style="width: 100%; padding: 0.8rem; margin: 1rem 0; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white;">
+        <button class="btn-primary" onclick="closePopup('newsletterPopup')">S'inscrire</button>
+    </div>
+
+    <script>
+        // Three.js Carousel 3D
+        let scene, camera, renderer;
+        let cards = [];
+        let rotationSpeed = 0;
+        let targetRotation = 0;
+        let currentRotation = 0;
+        const cardCount = 6;
+
+        function initThreeJS() {
+            const container = document.getElementById('carousel-container');
+            
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x0f172a, 5, 25);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                45,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 0, 15);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true, 
+                alpha: true 
+            });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+            
+            // Lumières
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            
+            const pointLight1 = new THREE.PointLight(0x667eea, 1.5, 20);
+            pointLight1.position.set(5, 5, 5);
+            scene.add(pointLight1);
+            
+            const pointLight2 = new THREE.PointLight(0xf093fb, 1.5, 20);
+            pointLight2.position.set(-5, -5, 5);
+            scene.add(pointLight2);
+            
+            // Création des cartes
+            createCards();
+            
+            // Animation
+            animate();
+            
+            // Gestionnaires d'événements
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createCards() {
+            const radius = 8;
+            const cardTexts = [
+                { title: 'Innovation', desc: 'Technologies de pointe', color: 0x667eea },
+                { title: 'Performance', desc: 'Résultats optimaux', color: 0x764ba2 },
+                { title: 'Sécurité', desc: 'Protection maximale', color: 0xf093fb },
+                { title: 'Scalabilité', desc: 'Croissance flexible', color: 0xec4899 },
+                { title: 'Support 24/7', desc: 'Assistance continue', color: 0x8b5cf6 },
+                { title: 'Intelligence', desc: 'Solutions IA avancées', color: 0x3b82f6 }
+            ];
+            
+            for (let i = 0; i < cardCount; i++) {
+                const angle = (i / cardCount) * Math.PI * 2;
+                
+                // Géométrie de la carte
+                const geometry = new THREE.BoxGeometry(1.25, 1.75, 0.1);
+                
+                // Matériau avec couleur dégradée
+                const material = new THREE.MeshPhongMaterial({
+                    color: cardTexts[i].color,
+                    emissive: cardTexts[i].color,
+                    emissiveIntensity: 0.2,
+                    shininess: 100,
+                    specular: 0xffffff,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const card = new THREE.Mesh(geometry, material);
+                
+                // Position en cercle
+                card.position.x = Math.sin(angle) * radius;
+                card.position.z = Math.cos(angle) * radius;
+                card.rotation.y = -angle;
+                
+                // Bordure lumineuse
+                const edgeGeometry = new THREE.EdgesGeometry(geometry);
+                const edgeMaterial = new THREE.LineBasicMaterial({ 
+                    color: 0xffffff,
+                    linewidth: 2
+                });
+                const edges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+                card.add(edges);
+                
+                // Création du texte (canvas texture)
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = 512;
+                canvas.height = 512;
+                
+                // Fond transparent
+                context.fillStyle = 'rgba(0,0,0,0)';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Texte
+                context.fillStyle = 'white';
+                context.font = 'bold 60px Arial';
+                context.textAlign = 'center';
+                context.fillText(cardTexts[i].title, 256, 200);
+                
+                context.font = '30px Arial';
+                context.fillText(cardTexts[i].desc, 256, 280);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const textMaterial = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    transparent: true,
+                    side: THREE.DoubleSide
+                });
+                
+                const textGeometry = new THREE.PlaneGeometry(1.2, 1.7);
+                const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+                textMesh.position.z = 0.06;
+                card.add(textMesh);
+                
+                cards.push(card);
+                scene.add(card);
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Rotation fluide
+            currentRotation += (targetRotation - currentRotation) * 0.05;
+            
+            // Mise à jour des cartes
+            cards.forEach((card, index) => {
+                const angle = (index / cardCount) * Math.PI * 2 + currentRotation;
+                const radius = 8;
+                
+                card.position.x = Math.sin(angle) * radius;
+                card.position.z = Math.cos(angle) * radius;
+                card.rotation.y = -angle;
+                
+                // Effet de profondeur renforcé
+                const depthFactor = Math.cos(angle);
+                const scale = 0.3 + (depthFactor + 1) * 0.35; // Échelle plus dramatique
+                card.scale.set(scale, scale, scale);
+                
+                // Opacité basée sur la distance
+                const opacity = 0.4 + (depthFactor + 1) * 0.3;
+                card.material.opacity = opacity;
+                
+                // Oscillation verticale
+                card.position.y = Math.sin(Date.now() * 0.001 + index) * 0.1;
+            });
+            
+            // Rotation automatique légère
+            if (Math.abs(targetRotation - currentRotation) < 0.01) {
+                targetRotation += 0.002;
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('carousel-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        // Contrôles du carrousel
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            targetRotation -= (Math.PI * 2) / cardCount;
+        });
+
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            targetRotation += (Math.PI * 2) / cardCount;
+        });
+
+        // Gestion des popups
+        function showPopup(popupId) {
+            document.getElementById(popupId).classList.add('active');
+            if (popupId === 'newsletterPopup') {
+                document.getElementById('overlay').classList.add('active');
+            }
+        }
+
+        function closePopup(popupId) {
+            document.getElementById(popupId).classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        }
+
+        // Initialisation
+        window.addEventListener('DOMContentLoaded', () => {
+            // Initialiser Three.js
+            initThreeJS();
+            
+            // Afficher le popup de cookies après 2 secondes
+            setTimeout(() => {
+                showPopup('cookiePopup');
+            }, 2000);
+            
+            // Afficher le popup newsletter après 10 secondes
+            setTimeout(() => {
+                showPopup('newsletterPopup');
+            }, 10000);
+            
+            // Animation du header au scroll
+            let lastScroll = 0;
+            window.addEventListener('scroll', () => {
+                const currentScroll = window.pageYOffset;
+                const header = document.querySelector('header');
+                
+                if (currentScroll > lastScroll && currentScroll > 100) {
+                    header.style.transform = 'translateY(-100%)';
+                } else {
+                    header.style.transform = 'translateY(0)';
+                }
+                
+                if (currentScroll > 50) {
+                    header.style.background = 'rgba(15, 23, 42, 0.95)';
+                } else {
+                    header.style.background = 'rgba(15, 23, 42, 0.8)';
+                }
+                
+                lastScroll = currentScroll;
+            });
+            
+            // Gestion du clic sur les espaces publicitaires
+            document.querySelectorAll('.ad-space').forEach(ad => {
+                ad.addEventListener('click', () => {
+                    ad.style.animation = 'pulse 0.5s ease';
+                    setTimeout(() => {
+                        ad.style.animation = '';
+                    }, 500);
+                });
+            });
+            
+            // Effet de parallaxe sur le hero
+            window.addEventListener('mousemove', (e) => {
+                const mouseX = e.clientX / window.innerWidth - 0.5;
+                const mouseY = e.clientY / window.innerHeight - 0.5;
+                
+                if (camera) {
+                    camera.position.x = mouseX * 4; // Parallaxe plus prononcée
+                    camera.position.y = -mouseY * 2;
+                    camera.lookAt(scene.position);
+                }
+            });
+            
+            // Interaction avec les cartes 3D au clic
+            renderer.domElement.addEventListener('click', (event) => {
+                const rect = renderer.domElement.getBoundingClientRect();
+                const mouse = new THREE.Vector2(
+                    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+                    -((event.clientY - rect.top) / rect.height) * 2 + 1
+                );
+                
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(mouse, camera);
+                
+                const intersects = raycaster.intersectObjects(cards);
+                if (intersects.length > 0) {
+                    const clickedCard = intersects[0].object;
+                    // Animation de zoom sur la carte cliquée
+                    const originalScale = clickedCard.scale.x;
+                    clickedCard.scale.set(originalScale * 1.3, originalScale * 1.3, originalScale * 1.3);
+                    setTimeout(() => {
+                        clickedCard.scale.set(originalScale, originalScale, originalScale);
+                    }, 300);
+                }
+            });
+            
+            // Effet de typing pour le titre
+            const title = document.querySelector('.hero-title');
+            const originalText = title.textContent;
+            title.textContent = '';
+            let charIndex = 0;
+            
+            function typeWriter() {
+                if (charIndex < originalText.length) {
+                    title.textContent += originalText.charAt(charIndex);
+                    charIndex++;
+                    setTimeout(typeWriter, 100);
+                }
+            }
+            
+            setTimeout(typeWriter, 500);
+            
+            // Observation des cards pour animation au scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -100px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+            
+            document.querySelectorAll('.feature-card').forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                card.style.transition = 'all 0.6s ease';
+                observer.observe(card);
+            });
+            
+            // Gestion du menu mobile (responsive)
+            const menuToggle = document.createElement('div');
+            menuToggle.innerHTML = '☰';
+            menuToggle.style.cssText = `
+                display: none;
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                font-size: 2rem;
+                cursor: pointer;
+                z-index: 1001;
+                color: white;
+            `;
+            document.body.appendChild(menuToggle);
+            
+            if (window.innerWidth <= 768) {
+                menuToggle.style.display = 'block';
+            }
+            
+            menuToggle.addEventListener('click', () => {
+                const navMenu = document.querySelector('.nav-menu');
+                navMenu.classList.toggle('active');
+                menuToggle.innerHTML = navMenu.classList.contains('active') ? '✕' : '☰';
+            });
+            
+            window.addEventListener('resize', () => {
+                if (window.innerWidth <= 768) {
+                    menuToggle.style.display = 'block';
+                } else {
+                    menuToggle.style.display = 'none';
+                    document.querySelector('.nav-menu').classList.remove('active');
+                }
+            });
+            
+            // Ajout d'un effet de particules en arrière-plan
+            function createParticle() {
+                const particle = document.createElement('div');
+                particle.style.cssText = `
+                    position: fixed;
+                    width: 4px;
+                    height: 4px;
+                    background: rgba(139, 92, 246, 0.5);
+                    border-radius: 50%;
+                    pointer-events: none;
+                    z-index: 1;
+                    left: ${Math.random() * window.innerWidth}px;
+                    top: ${Math.random() * window.innerHeight}px;
+                    animation: particleFloat ${5 + Math.random() * 10}s linear infinite;
+                `;
+                document.body.appendChild(particle);
+                
+                setTimeout(() => {
+                    particle.remove();
+                }, 15000);
+            }
+            
+            // Créer des particules périodiquement
+            setInterval(createParticle, 1000);
+            
+            // Animation CSS pour les particules
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes particleFloat {
+                    0% {
+                        transform: translateY(0) translateX(0);
+                        opacity: 0;
+                    }
+                    10% {
+                        opacity: 1;
+                    }
+                    90% {
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: translateY(-100vh) translateX(${Math.random() * 200 - 100}px);
+                        opacity: 0;
+                    }
+                }
+                
+                @keyframes pulse {
+                    0% {
+                        transform: scale(1);
+                    }
+                    50% {
+                        transform: scale(1.1);
+                    }
+                    100% {
+                        transform: scale(1);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Effet sonore au survol (optionnel - utilise l'API Web Audio)
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            function playHoverSound() {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.1);
+            }
+            
+            // Activer le son au survol des boutons
+            document.querySelectorAll('button, .nav-item a').forEach(element => {
+                element.addEventListener('mouseenter', () => {
+                    if (audioContext.state === 'running') {
+                        playHoverSound();
+                    }
+                });
+            });
+            
+            // Démarrer l'audio context après interaction utilisateur
+            document.addEventListener('click', () => {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+            }, { once: true });
+        });
+
+        // Ajout d'un easter egg
+        let konamiCode = [];
+        const konamiSequence = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+        
+        document.addEventListener('keydown', (e) => {
+            konamiCode.push(e.key);
+            konamiCode = konamiCode.slice(-10);
+            
+            if (konamiCode.join(',') === konamiSequence.join(',')) {
+                document.body.style.animation = 'rainbow 2s linear infinite';
+                setTimeout(() => {
+                    document.body.style.animation = '';
+                }, 5000);
+                
+                // Animation arc-en-ciel
+                const rainbowStyle = document.createElement('style');
+                rainbowStyle.textContent = `
+                    @keyframes rainbow {
+                        0% { filter: hue-rotate(0deg); }
+                        100% { filter: hue-rotate(360deg); }
+                    }
+                `;
+                document.head.appendChild(rainbowStyle);
+            }
+        });
+    </script>
+</body>
+</html>
