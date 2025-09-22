@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TechVision Corp - Innovation & Excellence</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- Script html2canvas pour capturer les pages (optionnel mais recommandé) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -29,6 +27,7 @@
             color: var(--light);
             overflow-x: hidden;
             min-height: 100vh;
+            position: relative;
         }
 
         /* Header avec effet glassmorphism */
@@ -70,6 +69,8 @@
             -webkit-text-fill-color: transparent;
             animation: glow 2s ease-in-out infinite;
             cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
         }
 
         @keyframes glow {
@@ -154,7 +155,7 @@
             transform: translateX(5px);
         }
 
-        /* Container pour les pages 3D */
+        /* Container pour les transitions 3D des pages - PLEIN ÉCRAN */
         #page-transition-container {
             position: fixed;
             top: 0;
@@ -176,11 +177,13 @@
             position: relative;
             z-index: 1;
             opacity: 1;
-            transition: opacity 0.8s ease;
+            transition: opacity 0.3s ease;
+            width: 100%;
+            min-height: 100vh;
         }
 
         .page-content.transitioning {
-            opacity: 0.2;
+            opacity: 0.3;
         }
 
         /* Sidebars */
@@ -240,17 +243,6 @@
             box-shadow: 0 5px 20px rgba(236, 72, 153, 0.3);
         }
 
-        /* Pages individuelles */
-        .page {
-            display: none;
-            min-height: 100vh;
-            padding-top: 80px;
-        }
-
-        .page.active {
-            display: block;
-        }
-
         /* Hero Section avec Canvas Three.js */
         .hero {
             padding: 2rem 5%;
@@ -260,6 +252,7 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            padding-top: 100px;
         }
 
         .hero-title {
@@ -290,7 +283,6 @@
             height: 500px;
             position: relative;
             margin: 2rem 0;
-            cursor: pointer;
         }
 
         .carousel-controls {
@@ -337,8 +329,9 @@
             padding: 4rem 5%;
             background: rgba(30, 41, 59, 0.5);
             backdrop-filter: blur(10px);
-            margin: 2rem 0;
+            margin: 2rem auto;
             border-radius: 20px;
+            max-width: 1400px;
         }
 
         .features-grid {
@@ -381,100 +374,6 @@
             border-color: var(--secondary);
         }
 
-        /* Services page */
-        .services-content {
-            padding: 4rem 5%;
-        }
-
-        .services-content h1 {
-            font-size: 3rem;
-            margin-bottom: 2rem;
-            text-align: center;
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        /* Produits page */
-        .products-content {
-            padding: 4rem 5%;
-        }
-
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin-top: 2rem;
-        }
-
-        .product-card {
-            background: rgba(51, 65, 85, 0.7);
-            border-radius: 15px;
-            padding: 2rem;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        .product-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(139, 92, 246, 0.3);
-        }
-
-        /* About page */
-        .about-content {
-            padding: 4rem 5%;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .about-content h1 {
-            font-size: 3rem;
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-
-        /* Contact page */
-        .contact-content {
-            padding: 4rem 5%;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .contact-form {
-            background: rgba(51, 65, 85, 0.5);
-            padding: 2rem;
-            border-radius: 15px;
-            margin-top: 2rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--accent);
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.8rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            color: white;
-            transition: all 0.3s ease;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--accent);
-            background: rgba(255, 255, 255, 0.15);
-        }
-
         /* Footer */
         footer {
             background: rgba(15, 23, 42, 0.9);
@@ -488,6 +387,8 @@
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 2rem;
             margin-bottom: 2rem;
+            max-width: 1400px;
+            margin: 0 auto 2rem;
         }
 
         .footer-section h3 {
@@ -755,152 +656,40 @@
         </div>
     </aside>
 
-    <!-- Contenu des pages -->
+    <!-- Contenu de la page -->
     <div class="page-content">
-        <!-- Page Accueil -->
-        <div id="page-accueil" class="page active">
-            <section class="hero">
-                <h1 class="hero-title">Innovation & Excellence</h1>
-                <p class="hero-subtitle">Transformez votre vision en réalité digitale</p>
-                
-                <!-- Container pour le carrousel 3D -->
-                <div id="carousel-container">
-                    <div class="carousel-controls">
-                        <button class="carousel-btn" id="prevBtn">‹</button>
-                        <button class="carousel-btn" id="nextBtn">›</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Features Section -->
-            <section class="features">
-                <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 2rem;">Nos Services</h2>
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <h3>Innovation</h3>
-                        <p>Solutions technologiques de pointe pour transformer votre entreprise</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Performance</h3>
-                        <p>Optimisation maximale pour des résultats exceptionnels</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Sécurité</h3>
-                        <p>Protection avancée de vos données et infrastructures</p>
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <!-- Page Services -->
-        <div id="page-services" class="page">
-            <div class="services-content">
-                <h1>Nos Services</h1>
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <h3>Consulting</h3>
-                        <p>Conseils d'experts pour votre transformation digitale</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Développement</h3>
-                        <p>Applications sur mesure adaptées à vos besoins</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Intégration</h3>
-                        <p>Solutions d'intégration transparentes</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Support 24/7</h3>
-                        <p>Assistance technique continue</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Formation</h3>
-                        <p>Programmes de formation personnalisés</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Maintenance</h3>
-                        <p>Services de maintenance préventive et corrective</p>
-                    </div>
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1 class="hero-title">Innovation & Excellence</h1>
+            <p class="hero-subtitle">Transformez votre vision en réalité digitale</p>
+            
+            <!-- Container pour le carrousel 3D -->
+            <div id="carousel-container">
+                <div class="carousel-controls">
+                    <button class="carousel-btn" id="prevBtn">‹</button>
+                    <button class="carousel-btn" id="nextBtn">›</button>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- Page Produits -->
-        <div id="page-produits" class="page">
-            <div class="products-content">
-                <h1>Nos Produits</h1>
-                <div class="products-grid">
-                    <div class="product-card">
-                        <h3>Suite Enterprise</h3>
-                        <p>Solution complète de gestion d'entreprise</p>
-                        <button class="btn-primary">En savoir plus</button>
-                    </div>
-                    <div class="product-card">
-                        <h3>Cloud Platform</h3>
-                        <p>Infrastructure cloud scalable et sécurisée</p>
-                        <button class="btn-primary">En savoir plus</button>
-                    </div>
-                    <div class="product-card">
-                        <h3>Analytics Pro</h3>
-                        <p>Outils d'analyse de données avancés</p>
-                        <button class="btn-primary">En savoir plus</button>
-                    </div>
-                    <div class="product-card">
-                        <h3>Security Shield</h3>
-                        <p>Protection cybersécurité de nouvelle génération</p>
-                        <button class="btn-primary">En savoir plus</button>
-                    </div>
+        <!-- Features Section -->
+        <section class="features">
+            <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 2rem;">Nos Services</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>Innovation</h3>
+                    <p>Solutions technologiques de pointe pour transformer votre entreprise</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Performance</h3>
+                    <p>Optimisation maximale pour des résultats exceptionnels</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Sécurité</h3>
+                    <p>Protection avancée de vos données et infrastructures</p>
                 </div>
             </div>
-        </div>
-
-        <!-- Page À Propos -->
-        <div id="page-apropos" class="page">
-            <div class="about-content">
-                <h1>À Propos de Nous</h1>
-                <p style="font-size: 1.2rem; line-height: 1.8; margin-bottom: 2rem;">
-                    TechVision Corp est un leader dans le domaine de la transformation digitale. 
-                    Depuis notre création, nous nous engageons à fournir des solutions innovantes 
-                    qui permettent à nos clients de prospérer dans l'économie numérique.
-                </p>
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <h3>Notre Mission</h3>
-                        <p>Démocratiser l'accès aux technologies de pointe pour toutes les entreprises</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Notre Vision</h3>
-                        <p>Devenir le partenaire technologique de référence mondiale</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Nos Valeurs</h3>
-                        <p>Innovation, Intégrité, Excellence, Collaboration</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Page Contact -->
-        <div id="page-contact" class="page">
-            <div class="contact-content">
-                <h1>Contactez-nous</h1>
-                <div class="contact-form">
-                    <div class="form-group">
-                        <label>Nom</label>
-                        <input type="text" placeholder="Votre nom">
-                    </div>
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" placeholder="votre@email.com">
-                    </div>
-                    <div class="form-group">
-                        <label>Message</label>
-                        <textarea rows="5" placeholder="Votre message..."></textarea>
-                    </div>
-                    <button class="btn-primary">Envoyer</button>
-                </div>
-            </div>
-        </div>
+        </section>
     </div>
 
     <!-- Footer -->
@@ -908,31 +697,31 @@
         <div class="footer-content">
             <div class="footer-section">
                 <h3>Entreprise</h3>
-                <a href="#">À propos</a>
-                <a href="#">Carrières</a>
-                <a href="#">Presse</a>
-                <a href="#">Blog</a>
+                <a href="apropos.html">À propos</a>
+                <a href="carrieres.html">Carrières</a>
+                <a href="presse.html">Presse</a>
+                <a href="blog.html">Blog</a>
             </div>
             <div class="footer-section">
                 <h3>Services</h3>
-                <a href="#">Consulting</a>
-                <a href="#">Développement</a>
-                <a href="#">Formation</a>
-                <a href="#">Support</a>
+                <a href="services.html#consulting">Consulting</a>
+                <a href="services.html#development">Développement</a>
+                <a href="services.html#formation">Formation</a>
+                <a href="services.html#support">Support</a>
             </div>
             <div class="footer-section">
                 <h3>Ressources</h3>
-                <a href="#">Documentation</a>
-                <a href="#">API</a>
-                <a href="#">Tutoriels</a>
-                <a href="#">FAQ</a>
+                <a href="documentation.html">Documentation</a>
+                <a href="api.html">API</a>
+                <a href="tutoriels.html">Tutoriels</a>
+                <a href="faq.html">FAQ</a>
             </div>
             <div class="footer-section">
                 <h3>Contact</h3>
-                <a href="#">Email</a>
-                <a href="#">Téléphone</a>
-                <a href="#">LinkedIn</a>
-                <a href="#">Twitter</a>
+                <a href="mailto:contact@techvision.com">Email</a>
+                <a href="tel:+33123456789">Téléphone</a>
+                <a href="https://linkedin.com">LinkedIn</a>
+                <a href="https://twitter.com">Twitter</a>
             </div>
         </div>
         <div style="text-align: center; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);">
@@ -964,6 +753,9 @@
         <p style="margin: 0.5rem 0 0; font-size: 0.9rem;">Les liens internes utilisent des transitions 3D. Les liens vers d'autres pages sont normaux.</p>
     </div>
 
+    <!-- Script html2canvas pour capturer les pages (optionnel mais recommandé) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <script>
         // ========== CONFIGURATION ==========
         // Pour utiliser ce système dans votre architecture multi-pages:
@@ -979,9 +771,6 @@
         let targetRotation = 0;
         let currentRotation = 0;
         const cardCount = 6;
-        let isCarouselPaused = false;
-        let selectedCard = null;
-        let raycaster, mouse;
         
         // Variables pour les transitions de pages
         let pageScene, pageCamera, pageRenderer;
@@ -1191,15 +980,15 @@
             document.querySelector('.page-content').classList.add('transitioning');
             
             let animationProgress = 0;
-            const animationDuration = 2000;
+            const animationDuration = 1200;
             const startTime = Date.now();
             
             function animatePageTransition() {
                 const elapsed = Date.now() - startTime;
                 animationProgress = Math.min(elapsed / animationDuration, 1);
                 
-                // Courbe d'animation easing (plus douce)
-                const easeProgress = 1 - Math.pow(1 - animationProgress, 2);
+                // Courbe d'animation easing
+                const easeProgress = 1 - Math.pow(1 - animationProgress, 3);
                 
                 // Animation de la page actuelle
                 switch(direction) {
@@ -1221,13 +1010,13 @@
                         break;
                 }
                 
-                // Effet de profondeur (plus lent et visible)
+                // Effet de profondeur
                 currentPageMesh.position.z = -10 * easeProgress;
-                currentPageMesh.rotation.y = Math.PI * 0.2 * easeProgress;
-                currentPageMesh.material.opacity = 1 - easeProgress * 0.4;
+                currentPageMesh.rotation.y = Math.PI * 0.15 * easeProgress;
+                currentPageMesh.material.opacity = 1 - easeProgress * 0.6;
                 
                 newPageMesh.position.z = -5 + 5 * easeProgress;
-                newPageMesh.rotation.y = -Math.PI * 0.2 * (1 - easeProgress);
+                newPageMesh.rotation.y = -Math.PI * 0.15 * (1 - easeProgress);
                 
                 pageRenderer.render(pageScene, pageCamera);
                 
@@ -1244,14 +1033,14 @@
             animatePageTransition();
         }
 
-        // Initialisation du carrousel Three.js (sans effet hover)
+        // Initialisation du carrousel Three.js
         function initThreeJS() {
             const container = document.getElementById('carousel-container');
             if (!container) return;
             
             // Scene
             scene = new THREE.Scene();
-            scene.fog = new THREE.Fog(0x0f172a, 12, 45);
+            scene.fog = new THREE.Fog(0x0f172a, 1, 15);
             
             // Camera
             camera = new THREE.PerspectiveCamera(
@@ -1260,7 +1049,7 @@
                 0.1,
                 1000
             );
-            camera.position.set(0, 0, 25);
+            camera.position.set(0, 0, 8);
             
             // Renderer
             renderer = new THREE.WebGLRenderer({ 
@@ -1271,42 +1060,20 @@
             renderer.setPixelRatio(window.devicePixelRatio);
             container.appendChild(renderer.domElement);
             
-            // Lumières pour l'espace vaste
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+            // Lumières
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
             scene.add(ambientLight);
             
-            // Lumière principale (plus forte et plus éloignée)
-            const pointLight1 = new THREE.PointLight(0x667eea, 2.5, 40);
-            pointLight1.position.set(8, 8, 8);
+            const pointLight1 = new THREE.PointLight(0x667eea, 1.5, 20);
+            pointLight1.position.set(5, 5, 5);
             scene.add(pointLight1);
             
-            // Lumière secondaire
-            const pointLight2 = new THREE.PointLight(0xf093fb, 2.0, 35);
-            pointLight2.position.set(-8, -8, 8);
+            const pointLight2 = new THREE.PointLight(0xf093fb, 1.5, 20);
+            pointLight2.position.set(-5, -5, 5);
             scene.add(pointLight2);
-            
-            // Lumière d'ambiance supplémentaire
-            const pointLight3 = new THREE.PointLight(0x8b5cf6, 1.5, 30);
-            pointLight3.position.set(0, 12, 0);
-            scene.add(pointLight3);
-            
-            // Lumière de fond pour la profondeur
-            const pointLight4 = new THREE.PointLight(0x3b82f6, 1.0, 50);
-            pointLight4.position.set(0, 0, -10);
-            scene.add(pointLight4);
             
             // Création des cartes
             createCards();
-            
-            // Ajouter des particules flottantes pour l'effet de salle vaste
-            createFloatingParticles();
-            
-            // Initialiser le raycaster pour les interactions
-            raycaster = new THREE.Raycaster();
-            mouse = new THREE.Vector2();
-            
-            // Ajouter les événements de clic
-            setupCardInteractions();
             
             // Animation
             animateCarousel();
@@ -1315,176 +1082,8 @@
             window.addEventListener('resize', onWindowResize);
         }
 
-        function setupCardInteractions() {
-            const container = document.getElementById('carousel-container');
-            
-            container.addEventListener('click', onMouseClick);
-            container.addEventListener('mousemove', onMouseMove);
-        }
-
-        function onMouseMove(event) {
-            if (!renderer || !camera) return;
-            
-            const rect = renderer.domElement.getBoundingClientRect();
-            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-            
-            // Effet hover sur les cartes
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(cards);
-            
-            // Réinitialiser toutes les cartes
-            cards.forEach(card => {
-                card.scale.set(1, 1, 1);
-                card.material.emissiveIntensity = 0.2;
-            });
-            
-            // Mettre en évidence la carte survolée
-            if (intersects.length > 0 && !isCarouselPaused) {
-                const hoveredCard = intersects[0].object;
-                hoveredCard.scale.set(1.1, 1.1, 1.1);
-                hoveredCard.material.emissiveIntensity = 0.5;
-            }
-        }
-
-        function onMouseClick(event) {
-            if (!renderer || !camera || !raycaster) return;
-            
-            const rect = renderer.domElement.getBoundingClientRect();
-            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-            
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(cards);
-            
-            if (intersects.length > 0) {
-                const clickedCard = intersects[0].object;
-                handleCardClick(clickedCard);
-            }
-        }
-
-        function handleCardClick(card) {
-            if (selectedCard === card) {
-                // Si on clique sur la même carte, la remettre en place
-                resetCard(card);
-            } else {
-                // Arrêter le carrousel et retourner la carte
-                pauseCarousel();
-                flipCard(card);
-            }
-        }
-
-        function pauseCarousel() {
-            isCarouselPaused = true;
-        }
-
-        function resumeCarousel() {
-            isCarouselPaused = false;
-        }
-
-        function flipCard(card) {
-            selectedCard = card;
-            
-            // Ajouter une propriété pour marquer la carte comme retournée
-            card.userData.isFlipped = true;
-            card.userData.flipRotation = 0;
-            
-            const startTime = Date.now();
-            const duration = 1000; // 1 seconde
-            
-            function animateFlip() {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                
-                // Courbe d'animation easing
-                const easeProgress = 1 - Math.pow(1 - progress, 3);
-                
-                // Appliquer la rotation de retournement
-                card.userData.flipRotation = Math.PI * easeProgress;
-                
-                if (progress < 1) {
-                    requestAnimationFrame(animateFlip);
-                } else {
-                    // Animation terminée
-                    setTimeout(() => {
-                        resetCard(card);
-                    }, 3000); // Garder la carte retournée 3 secondes
-                }
-            }
-            
-            animateFlip();
-        }
-
-        function resetCard(card) {
-            if (selectedCard !== card) return;
-            
-            const startFlipRotation = card.userData.flipRotation;
-            const startTime = Date.now();
-            const duration = 1000;
-            
-            function animateReset() {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                
-                const easeProgress = 1 - Math.pow(1 - progress, 3);
-                card.userData.flipRotation = startFlipRotation - (startFlipRotation * easeProgress);
-                
-                if (progress < 1) {
-                    requestAnimationFrame(animateReset);
-                } else {
-                    card.userData.isFlipped = false;
-                    card.userData.flipRotation = 0;
-                    selectedCard = null;
-                    resumeCarousel();
-                }
-            }
-            
-            animateReset();
-        }
-
-        function createFloatingParticles() {
-            const particleCount = 50;
-            const particles = new THREE.BufferGeometry();
-            const positions = new Float32Array(particleCount * 3);
-            
-            for (let i = 0; i < particleCount * 3; i += 3) {
-                positions[i] = (Math.random() - 0.5) * 80;     // x
-                positions[i + 1] = (Math.random() - 0.5) * 40; // y
-                positions[i + 2] = (Math.random() - 0.5) * 80; // z
-            }
-            
-            particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            
-            const particleMaterial = new THREE.PointsMaterial({
-                color: 0x8b5cf6,
-                size: 0.1,
-                transparent: true,
-                opacity: 0.6
-            });
-            
-            const particleSystem = new THREE.Points(particles, particleMaterial);
-            scene.add(particleSystem);
-            
-            // Animation des particules
-            function animateParticles() {
-                const positions = particleSystem.geometry.attributes.position.array;
-                for (let i = 0; i < particleCount; i++) {
-                    positions[i * 3 + 1] += Math.sin(Date.now() * 0.001 + i) * 0.002;
-                    positions[i * 3] += Math.cos(Date.now() * 0.0008 + i) * 0.001;
-                }
-                particleSystem.geometry.attributes.position.needsUpdate = true;
-            }
-            
-            // Ajouter l'animation des particules à la boucle principale
-            const originalAnimate = animateCarousel;
-            animateCarousel = function() {
-                originalAnimate();
-                animateParticles();
-            };
-        }
-
         function createCards() {
-            const radius = 15;
+            const radius = 3.5;
             const cardTexts = [
                 { title: 'Innovation', desc: 'Technologies de pointe', color: 0x667eea },
                 { title: 'Performance', desc: 'Résultats optimaux', color: 0x764ba2 },
@@ -1498,7 +1097,7 @@
                 const angle = (i / cardCount) * Math.PI * 2;
                 
                 // Géométrie de la carte
-                const geometry = new THREE.BoxGeometry(4, 5.5, 0.2);
+                const geometry = new THREE.BoxGeometry(2.5, 3.5, 0.1);
                 
                 // Matériau avec couleur dégradée
                 const material = new THREE.MeshPhongMaterial({
@@ -1529,21 +1128,21 @@
                 // Création du texte (canvas texture)
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
-                canvas.width = 1024;
-                canvas.height = 1024;
+                canvas.width = 512;
+                canvas.height = 512;
                 
                 // Fond transparent
                 context.fillStyle = 'rgba(0,0,0,0)';
                 context.fillRect(0, 0, canvas.width, canvas.height);
                 
-                // Texte (plus grand pour les cartes agrandies)
+                // Texte
                 context.fillStyle = 'white';
-                context.font = 'bold 120px Arial';
+                context.font = 'bold 60px Arial';
                 context.textAlign = 'center';
-                context.fillText(cardTexts[i].title, 512, 400);
+                context.fillText(cardTexts[i].title, 256, 200);
                 
-                context.font = '60px Arial';
-                context.fillText(cardTexts[i].desc, 512, 560);
+                context.font = '30px Arial';
+                context.fillText(cardTexts[i].desc, 256, 280);
                 
                 const texture = new THREE.CanvasTexture(canvas);
                 const textMaterial = new THREE.MeshBasicMaterial({
@@ -1552,9 +1151,9 @@
                     side: THREE.DoubleSide
                 });
                 
-                const textGeometry = new THREE.PlaneGeometry(3.8, 5.3);
+                const textGeometry = new THREE.PlaneGeometry(2.4, 3.4);
                 const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-                textMesh.position.z = 0.12;
+                textMesh.position.z = 0.06;
                 card.add(textMesh);
                 
                 cards.push(card);
@@ -1566,41 +1165,25 @@
             if (!renderer) return;
             requestAnimationFrame(animateCarousel);
             
-            // Rotation fluide sans effet hover (seulement si pas en pause)
-            if (!isCarouselPaused) {
-                currentRotation += (targetRotation - currentRotation) * 0.05;
-            }
+            // Rotation fluide
+            currentRotation += (targetRotation - currentRotation) * 0.05;
             
             // Mise à jour des cartes
             cards.forEach((card, index) => {
                 const angle = (index / cardCount) * Math.PI * 2 + currentRotation;
-                const radius = 15;
+                const radius = 3.5;
                 
                 card.position.x = Math.sin(angle) * radius;
                 card.position.z = Math.cos(angle) * radius;
+                card.rotation.y = -angle;
                 
-                // Appliquer la rotation du carrousel + la rotation de retournement
-                const baseRotation = -angle;
-                const flipRotation = card.userData.flipRotation || 0;
-                card.rotation.y = baseRotation + flipRotation;
-                
-                // Effet de profondeur plus prononcé pour l'espace vaste
-                const depthScale = 1 + Math.cos(angle) * 0.3;
-                const depthFade = 1 - Math.abs(Math.cos(angle)) * 0.1;
+                // Effet de profondeur basé sur la position
+                const depthScale = 1 + Math.cos(angle) * 0.15;
                 card.scale.set(depthScale, depthScale, depthScale);
-                card.material.opacity = depthFade;
             });
             
-            // Rotation automatique très légère (seulement si pas en pause)
-            if (!isCarouselPaused) {
-                targetRotation += 0.003;
-            }
-            
-            // Mouvement subtil de la caméra pour l'effet de salle vaste
-            const time = Date.now() * 0.0005;
-            camera.position.x = Math.sin(time) * 0.5;
-            camera.position.y = Math.cos(time * 0.7) * 0.3;
-            camera.lookAt(0, 0, 0);
+            // Rotation automatique très légère
+            targetRotation += 0.003;
             
             renderer.render(scene, camera);
         }
@@ -1620,6 +1203,18 @@
             }
         }
 
+        // Gestion des popups
+        function showPopup(popupId) {
+            document.getElementById(popupId).classList.add('active');
+            if (popupId === 'newsletterPopup') {
+                document.getElementById('overlay').classList.add('active');
+            }
+        }
+
+        function closePopup(popupId) {
+            document.getElementById(popupId).classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        }
 
         // Fonction pour intercepter les clics sur les liens
         function setupNavigationInterception() {
@@ -1664,9 +1259,9 @@
                     // Ajouter une animation d'entrée
                     document.querySelector('.page-content').style.opacity = '0';
                     setTimeout(() => {
-                        document.querySelector('.page-content').style.transition = 'opacity 1s ease';
+                        document.querySelector('.page-content').style.transition = 'opacity 0.5s ease';
                         document.querySelector('.page-content').style.opacity = '1';
-                    }, 200);
+                    }, 100);
                 }
                 
                 // Nettoyer l'état
@@ -1674,26 +1269,15 @@
             }
         }
 
-        // Gestion des popups
-        function showPopup(popupId) {
-            document.getElementById(popupId).classList.add('active');
-            if (popupId === 'newsletterPopup') {
-                document.getElementById('overlay').classList.add('active');
-            }
-        }
-
-        function closePopup(popupId) {
-            document.getElementById(popupId).classList.remove('active');
-            document.getElementById('overlay').classList.remove('active');
-        }
-
         // Initialisation
         window.addEventListener('DOMContentLoaded', () => {
             // Initialiser le système de transition de pages
             initPageTransition();
             
-            // Initialiser Three.js pour le carrousel
-            initThreeJS();
+            // Initialiser Three.js pour le carrousel (seulement sur la page d'accueil)
+            if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/') {
+                initThreeJS();
+            }
             
             // Configurer l'interception de navigation
             setupNavigationInterception();
@@ -1742,6 +1326,16 @@
                 lastScroll = currentScroll;
             });
             
+            // Gestion du clic sur les espaces publicitaires
+            document.querySelectorAll('.ad-space').forEach(ad => {
+                ad.addEventListener('click', () => {
+                    ad.style.animation = 'pulse 0.5s ease';
+                    setTimeout(() => {
+                        ad.style.animation = '';
+                    }, 500);
+                });
+            });
+            
             // Contrôles du carrousel
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
@@ -1757,16 +1351,6 @@
                     targetRotation += (Math.PI * 2) / cardCount;
                 });
             }
-            
-            // Gestion du clic sur les espaces publicitaires
-            document.querySelectorAll('.ad-space').forEach(ad => {
-                ad.addEventListener('click', () => {
-                    ad.style.animation = 'pulse 0.5s ease';
-                    setTimeout(() => {
-                        ad.style.animation = '';
-                    }, 500);
-                });
-            });
             
             // Observation des cards pour animation au scroll
             const observerOptions = {
