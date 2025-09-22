@@ -1365,8 +1365,14 @@
 
         function handleCardClick(card) {
             if (selectedCard === card) {
-                // Si on clique sur la même carte, la remettre en place
-                resetCard(card);
+                // Si la carte a un bouton "Ouvrage" et qu'on clique dessus
+                if (card.userData.hasOuvrageButton) {
+                    // Rediriger vers la page des ouvrages de cette catégorie
+                    redirectToOuvrages(card.userData.category);
+                } else {
+                    // Sinon, remettre la carte en place
+                    resetCard(card);
+                }
             } else {
                 // Arrêter le carrousel et retourner la carte
                 pauseCarousel();
@@ -1381,6 +1387,12 @@
         function resumeCarousel() {
             isCarouselPaused = false;
         }
+
+        function redirectToOuvrages(category) {
+            // Rediriger vers la page des ouvrages
+            window.location.href = `ouvrages.html?category=${category}`;
+        }
+
 
         function flipCard(card) {
             selectedCard = card;
@@ -1405,18 +1417,104 @@
                 if (progress < 1) {
                     requestAnimationFrame(animateFlip);
                 } else {
-                    // Animation terminée
-                    setTimeout(() => {
-                        resetCard(card);
-                    }, 3000); // Garder la carte retournée 3 secondes
+                    // Animation terminée - Afficher le bouton "Ouvrage"
+                    showOuvrageButton(card);
                 }
             }
             
             animateFlip();
         }
 
+        function showOuvrageButton(card) {
+            // Créer un canvas pour le bouton "Ouvrage" sur la carte
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 512;
+            canvas.height = 512;
+            
+            // Fond de la carte (couleur de base)
+            context.fillStyle = '#2c3e50';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Bordure décorative
+            context.strokeStyle = '#3498db';
+            context.lineWidth = 8;
+            context.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+            
+            // Titre "Ouvrage"
+            context.fillStyle = '#ecf0f1';
+            context.font = 'bold 48px Arial';
+            context.textAlign = 'center';
+            context.fillText('OUVRAGE', canvas.width / 2, 200);
+            
+            // Bouton stylé
+            const buttonX = canvas.width / 2 - 100;
+            const buttonY = 250;
+            const buttonWidth = 200;
+            const buttonHeight = 60;
+            
+            // Fond du bouton avec gradient
+            const gradient = context.createLinearGradient(buttonX, buttonY, buttonX + buttonWidth, buttonY + buttonHeight);
+            gradient.addColorStop(0, '#ff6b6b');
+            gradient.addColorStop(1, '#4ecdc4');
+            
+            context.fillStyle = gradient;
+            context.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+            
+            // Bordure du bouton
+            context.strokeStyle = '#ffffff';
+            context.lineWidth = 3;
+            context.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+            
+            // Texte du bouton
+            context.fillStyle = '#ffffff';
+            context.font = 'bold 24px Arial';
+            context.fillText('Ouvrir', canvas.width / 2, buttonY + 40);
+            
+            // Créer la texture pour la face arrière de la carte
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                side: THREE.DoubleSide
+            });
+            
+            // Créer un plan pour le bouton (face arrière)
+            const buttonGeometry = new THREE.PlaneGeometry(8, 8);
+            const buttonMesh = new THREE.Mesh(buttonGeometry, material);
+            
+            // Positionner le bouton sur la face arrière de la carte
+            buttonMesh.position.z = -0.1; // Légèrement en arrière de la carte
+            card.add(buttonMesh);
+            
+            // Stocker la référence du bouton dans la carte
+            card.userData.ouvrageButton = buttonMesh;
+            
+            // Ajouter un gestionnaire de clic sur la carte pour le bouton
+            card.userData.hasOuvrageButton = true;
+            
+            // Stocker la catégorie de la carte pour la redirection
+            const cardIndex = cards.indexOf(card);
+            const categories = [
+                'technologie',
+                'science', 
+                'art',
+                'histoire',
+                'sport',
+                'musique'
+            ];
+            card.userData.category = categories[cardIndex] || 'general';
+        }
+
         function resetCard(card) {
             if (selectedCard !== card) return;
+            
+            // Supprimer le bouton "Ouvrage" s'il existe
+            if (card.userData.ouvrageButton) {
+                card.remove(card.userData.ouvrageButton);
+                card.userData.ouvrageButton = null;
+                card.userData.hasOuvrageButton = false;
+            }
             
             const startFlipRotation = card.userData.flipRotation;
             const startTime = Date.now();
