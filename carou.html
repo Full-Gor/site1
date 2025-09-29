@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animation Cartes en Ligne</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            z-index: 100;
+            font-size: 14px;
+            opacity: 0.8;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .card-info {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-align: center;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .card-info.visible {
+            opacity: 1;
+        }
+
+        .card-info h2 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .card-info p {
+            font-size: 1.2em;
+            opacity: 0.8;
+        }
+
+        .floor-title {
+            position: absolute;
+            left: 20px;
+            color: white;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            cursor: pointer;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .floor-title:hover {
+            background: rgba(0,0,0,0.8);
+            border-color: rgba(255,255,255,0.6);
+            transform: scale(1.05);
+        }
+
+        .floor-title.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="info">
+        Animation Cartes en Ligne - 5 Étages<br>
+        <small>ESPACE: Redémarrer | R: Reset | C: Carrousels<br>
+        MOLETTE: Zoom (pendant carrousels)<br>
+        ↑↓: Déplacer caméra (pendant carrousels)<br>
+        CLIC + GLISSER: Contrôler carrousel manuellement</small>
+    </div>
+    <div class="loading" id="loading">
+        <div>Chargement de l'animation...</div>
+        <div style="font-size: 14px; margin-top: 10px;">Initialisation de Three.js</div>
+    </div>
+    <div class="card-info" id="cardInfo">
+        <h2 id="cardTitle">Titre</h2>
+        <p id="cardSubtitle">Sous-titre</p>
+    </div>
+
+    <!-- Titres des étages -->
+    <div class="floor-title" id="floorTitle0" style="top: 80px;">🐘 PHP</div>
+    <div class="floor-title" id="floorTitle1" style="top: 160px;">🎼 Symfony</div>
+    <div class="floor-title" id="floorTitle2" style="top: 240px;">💎 Ruby on Rails 8</div>
+    <div class="floor-title" id="floorTitle3" style="top: 320px;">⚛️ Next.js</div>
+    <div class="floor-title" id="floorTitle4" style="top: 400px;">🎨 Material UI</div>
+
+    <!-- Three.js depuis un CDN fiable -->
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+    
+    <script>
+        // Variables globales
+        let scene, camera, renderer, canvas;
+        let floors = [];
+        const floorTitles = ['PHP', 'Symfony', 'Ruby on Rails 8', 'Next.js', 'Material UI'];
+        let carouselRadius = 8;
+        let carouselSpeed = 0.001;
+        let zoomLevel = 1;
+        let baseDistance = 50;
+        let canZoom = false;
+        let cameraOffsetY = 0;
+        let baseCameraY = 20;
+        
+        // Variables pour le contrôle manuel des carrousels
+        let isDragging = false;
+        let selectedFloor = null;
+        let isCardClicked = false;
+        let lastMouseX = 0;
+        let manualRotationSpeed = {};
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        
+        // Données spécifiques par technologie
+        const techCardData = {
+            0: [ // PHP
+                { color: 0x4f5b93, title: 'Variables', subtitle: '$variable = "value"' },
+                { color: 0x6181b6, title: 'Boucle For', subtitle: 'for($i=0; $i<10; $i++)' },
+                { color: 0x8892bf, title: 'Condition If', subtitle: 'if($condition) { }' },
+                { color: 0x4f5b93, title: 'Foreach', subtitle: 'foreach($array as $item)' },
+                { color: 0x6181b6, title: 'Fonctions', subtitle: 'function myFunction()' },
+                { color: 0x8892bf, title: 'Classes', subtitle: 'class MyClass { }' },
+                { color: 0x4f5b93, title: 'Arrays', subtitle: '$array = [1, 2, 3]' },
+                { color: 0x6181b6, title: 'Include', subtitle: 'include "file.php"' }
+            ],
+            1: [ // Symfony
+                { color: 0x000000, title: 'New Project', subtitle: 'symfony new my_project' },
+                { color: 0x1a1a1a, title: 'Entity', subtitle: 'make:entity User' },
+                { color: 0x333333, title: 'Controller', subtitle: 'make:controller HomeController' },
+                { color: 0x000000, title: 'Migration', subtitle: 'make:migration' },
+                { color: 0x1a1a1a, title: 'Server', subtitle: 'symfony serve' },
+                { color: 0x333333, title: 'Form', subtitle: 'make:form UserType' },
+                { color: 0x000000, title: 'Repository', subtitle: 'make:repository' },
+                { color: 0x1a1a1a, title: 'Fixtures', subtitle: 'make:fixtures' }
+            ],
+            2: [ // Ruby on Rails 8
+                { color: 0xcc0000, title: 'New App', subtitle: 'rails new myapp' },
+                { color: 0xe60000, title: 'Generate Model', subtitle: 'rails g model User' },
+                { color: 0xff1a1a, title: 'Controller', subtitle: 'rails g controller Home' },
+                { color: 0xcc0000, title: 'Migration', subtitle: 'rails db:migrate' },
+                { color: 0xe60000, title: 'Server', subtitle: 'rails server' },
+                { color: 0xff1a1a, title: 'Routes', subtitle: 'resources :users' },
+                { color: 0xcc0000, title: 'Scaffold', subtitle: 'rails g scaffold Post' },
+                { color: 0xe60000, title: 'Console', subtitle: 'rails console' }
+            ],
+            3: [ // Next.js
+                { color: 0x000000, title: 'Create App', subtitle: 'npx create-next-app' },
+                { color: 0x1a1a1a, title: 'Pages', subtitle: 'pages/index.js' },
+                { color: 0x333333, title: 'Components', subtitle: 'components/Header.js' },
+                { color: 0x000000, title: 'API Routes', subtitle: 'pages/api/users.js' },
+                { color: 0x1a1a1a, title: 'Static Props', subtitle: 'getStaticProps()' },
+                { color: 0x333333, title: 'Server Props', subtitle: 'getServerSideProps()' },
+                { color: 0x000000, title: 'Dynamic Routes', subtitle: '[id].js' },
+                { color: 0x1a1a1a, title: 'Build', subtitle: 'npm run build' }
+            ],
+            4: [ // Material UI
+                { color: 0x1976d2, title: 'Button', subtitle: '<Button variant="contained">' },
+                { color: 0x1565c0, title: 'TextField', subtitle: '<TextField label="Name">' },
+                { color: 0x0d47a1, title: 'Card', subtitle: '<Card><CardContent>' },
+                { color: 0x1976d2, title: 'Grid', subtitle: '<Grid container spacing={2}>' },
+                { color: 0x1565c0, title: 'AppBar', subtitle: '<AppBar position="static">' },
+                { color: 0x0d47a1, title: 'Dialog', subtitle: '<Dialog open={open}>' },
+                { color: 0x1976d2, title: 'Theme', subtitle: 'createTheme()' },
+                { color: 0x1565c0, title: 'Icons', subtitle: '<HomeIcon />' }
+            ]
+        };
+
+        // Définitions détaillées pour chaque carte
+        const cardDefinitions = {
+            0: [ // PHP
+                { definition: 'Les variables en PHP stockent des données et commencent par $', code: '$name = "John";\n$age = 25;\necho $name . " a " . $age . " ans";' },
+                { definition: 'La boucle for répète un bloc de code un nombre défini de fois', code: 'for ($i = 0; $i < 10; $i++) {\n    echo "Nombre: " . $i . "<br>";\n}' },
+                { definition: 'La condition if exécute du code selon une condition', code: 'if ($age >= 18) {\n    echo "Majeur";\n} else {\n    echo "Mineur";\n}' },
+                { definition: 'Foreach parcourt tous les éléments d\'un tableau', code: '$fruits = ["pomme", "banane"];\nforeach ($fruits as $fruit) {\n    echo $fruit . "<br>";\n}' },
+                { definition: 'Les fonctions regroupent du code réutilisable', code: 'function saluer($nom) {\n    return "Bonjour " . $nom;\n}\necho saluer("Marie");' },
+                { definition: 'Les classes définissent des objets avec propriétés et méthodes', code: 'class Personne {\n    public $nom;\n    public function __construct($nom) {\n        $this->nom = $nom;\n    }\n}' },
+                { definition: 'Les tableaux stockent plusieurs valeurs dans une variable', code: '$nombres = [1, 2, 3, 4, 5];\n$personne = [\n    "nom" => "Jean",\n    "age" => 30\n];' },
+                { definition: 'Include permet d\'inclure le contenu d\'un autre fichier', code: '<?php\ninclude "header.php";\ninclude_once "config.php";\nrequire "functions.php";' }
+            ],
+            1: [ // Symfony
+                { definition: 'Créer un nouveau projet Symfony avec toutes les dépendances', code: 'symfony new my_project --webapp\n# ou\ncomposer create-project symfony/skeleton my_project' },
+                { definition: 'Générer une entité Doctrine pour la base de données', code: 'php bin/console make:entity User\n# Ajouter des propriétés interactivement\n# name, email, createdAt...' },
+                { definition: 'Créer un contrôleur pour gérer les routes HTTP', code: 'php bin/console make:controller HomeController\n# Génère src/Controller/HomeController.php' },
+                { definition: 'Créer une migration pour modifier la base de données', code: 'php bin/console make:migration\nphp bin/console doctrine:migrations:migrate' },
+                { definition: 'Démarrer le serveur de développement Symfony', code: 'symfony serve\n# ou\nphp -S localhost:8000 -t public/' },
+                { definition: 'Générer un formulaire Symfony pour saisir des données', code: 'php bin/console make:form UserType\n# Génère src/Form/UserType.php' },
+                { definition: 'Créer un repository pour les requêtes personnalisées', code: 'php bin/console make:repository User\n# Méthodes findBy, findOneBy...' },
+                { definition: 'Générer des données de test avec les fixtures', code: 'php bin/console make:fixtures UserFixtures\nphp bin/console doctrine:fixtures:load' }
+            ],
+            2: [ // Ruby on Rails 8
+                { definition: 'Créer une nouvelle application Rails avec toute la structure', code: 'rails new myapp\ncd myapp\nbundle install' },
+                { definition: 'Générer un modèle avec ses attributs et migration', code: 'rails generate model User name:string email:string\nrails db:migrate' },
+                { definition: 'Créer un contrôleur avec ses actions', code: 'rails generate controller Home index show\n# Génère app/controllers/home_controller.rb' },
+                { definition: 'Exécuter les migrations pour mettre à jour la DB', code: 'rails db:migrate\nrails db:rollback\nrails db:reset' },
+                { definition: 'Démarrer le serveur de développement Rails', code: 'rails server\n# ou\nrails s\n# Accessible sur localhost:3000' },
+                { definition: 'Définir les routes dans config/routes.rb', code: 'Rails.application.routes.draw do\n  resources :users\n  root "home#index"\nend' },
+                { definition: 'Générer un scaffold complet (modèle, vues, contrôleur)', code: 'rails generate scaffold Post title:string content:text\nrails db:migrate' },
+                { definition: 'Console interactive pour tester le code Rails', code: 'rails console\n# ou rails c\nUser.all\nUser.create(name: "John")' }
+            ],
+            3: [ // Next.js
+                { definition: 'Créer une nouvelle application Next.js', code: 'npx create-next-app@latest my-app\ncd my-app\nnpm run dev' },
+                { definition: 'Les pages Next.js sont des composants React dans /pages', code: '// pages/index.js\nexport default function Home() {\n  return <h1>Hello Next.js!</h1>\n}' },
+                { definition: 'Composants réutilisables dans le dossier /components', code: '// components/Header.js\nexport default function Header() {\n  return <header><h1>Mon Site</h1></header>\n}' },
+                { definition: 'Routes API pour créer des endpoints backend', code: '// pages/api/users.js\nexport default function handler(req, res) {\n  res.status(200).json({ name: "John" })\n}' },
+                { definition: 'Génération statique avec getStaticProps', code: 'export async function getStaticProps() {\n  const data = await fetch("api/data")\n  return { props: { data } }\n}' },
+                { definition: 'Rendu côté serveur avec getServerSideProps', code: 'export async function getServerSideProps(context) {\n  return { props: { user: userData } }\n}' },
+                { definition: 'Routes dynamiques avec crochets [param]', code: '// pages/user/[id].js\nexport default function User({ user }) {\n  return <div>{user.name}</div>\n}' },
+                { definition: 'Construire l\'application pour la production', code: 'npm run build\nnpm run start\n# Génère le dossier .next optimisé' }
+            ],
+            4: [ // Material UI
+                { definition: 'Bouton Material-UI avec différentes variantes', code: 'import { Button } from "@mui/material";\n\n<Button variant="contained" color="primary">\n  Cliquez-moi\n</Button>' },
+                { definition: 'Champ de saisie avec label et validation', code: 'import { TextField } from "@mui/material";\n\n<TextField\n  label="Nom"\n  variant="outlined"\n  required\n/>' },
+                { definition: 'Carte pour organiser le contenu', code: 'import { Card, CardContent } from "@mui/material";\n\n<Card>\n  <CardContent>\n    <h2>Titre</h2>\n  </CardContent>\n</Card>' },
+                { definition: 'Système de grille responsive', code: 'import { Grid } from "@mui/material";\n\n<Grid container spacing={2}>\n  <Grid item xs={12} md={6}>\n    Contenu\n  </Grid>\n</Grid>' },
+                { definition: 'Barre d\'application avec navigation', code: 'import { AppBar, Toolbar, Typography } from "@mui/material";\n\n<AppBar position="static">\n  <Toolbar>\n    <Typography variant="h6">Mon App</Typography>\n  </Toolbar>\n</AppBar>' },
+                { definition: 'Boîte de dialogue modale', code: 'import { Dialog, DialogTitle } from "@mui/material";\n\n<Dialog open={open} onClose={handleClose}>\n  <DialogTitle>Titre</DialogTitle>\n</Dialog>' },
+                { definition: 'Personnaliser le thème Material-UI', code: 'import { createTheme, ThemeProvider } from "@mui/material";\n\nconst theme = createTheme({\n  palette: {\n    primary: { main: "#1976d2" }\n  }\n});' },
+                { definition: 'Icônes Material Design', code: 'import HomeIcon from "@mui/icons-material/Home";\nimport MenuIcon from "@mui/icons-material/Menu";\n\n<HomeIcon color="primary" />' }
+            ]
+        };
+        // Classe Floor pour gérer chaque étage
+        class Floor {
+            constructor(floorIndex) {
+                this.floorIndex = floorIndex;
+                this.title = floorTitles[floorIndex];
+                this.yPosition = floorIndex * 8; // Espacement vertical entre étages
+                this.cards = [];
+                this.currentCardIndex = 0;
+                this.animationRunning = false;
+                this.carouselRunning = false;
+                this.manualControl = false;
+                this.rotationOffset = 0;
+                this.independentTime = 0; // Temps indépendant pour ce carrousel
+                
+                // Démarrer l'animation avec un délai
+                setTimeout(() => {
+                    this.animationRunning = true;
+                    this.startCardSequence();
+                }, floorIndex * 2000); // Décalage de 2 secondes par étage
+            }
+            
+            createCard(data, index) {
+                // Groupe pour la carte
+                const cardGroup = new THREE.Group();
+
+                // Géométrie de la carte (format carte standard)
+                const geometry = new THREE.BoxGeometry(3, 4, 0.1);
+                
+                // Matériau avec la couleur de la carte
+                const material = new THREE.MeshPhongMaterial({
+                    color: data.color,
+                    transparent: true,
+                    opacity: 0.9,
+                    shininess: 100
+                });
+
+                const cardMesh = new THREE.Mesh(geometry, material);
+                cardMesh.castShadow = true;
+                cardMesh.receiveShadow = true;
+
+                // Bordures brillantes
+                const edgeGeometry = new THREE.EdgesGeometry(geometry);
+                const edgeMaterial = new THREE.LineBasicMaterial({ 
+                    color: 0xffffff, 
+                    transparent: true, 
+                    opacity: 0.6
+                });
+                const edges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+
+                cardGroup.add(cardMesh);
+                cardGroup.add(edges);
+
+                // Créer l'objet card AVANT d'utiliser ses propriétés
+                const card = {
+                    group: cardGroup,
+                    mesh: cardMesh,
+                    edges: edges,
+                    data: data,
+                    definition: cardDefinitions[this.floorIndex][index],
+                    index: index,
+                    finalX: 0, // Sera calculé dynamiquement
+                    isFlipped: false,
+                    textMesh: null // Référence au mesh de texte pour le retournement
+                };
+
+                // Créer le texte pour la carte
+                const textMesh = this.createCardText(cardGroup, data);
+                card.textMesh = textMesh;
+                
+                // Position de l'étage
+                cardGroup.position.y = this.yPosition;
+                
+                // Rotation initiale : carte de profil (90 degrés sur l'axe Y)
+                cardGroup.rotation.y = Math.PI / 2;
+                // Position de départ : côté droit de l'écran (hors vue)
+                const startX = 25; // Bien à droite, hors de l'écran
+                cardGroup.position.set(startX, this.yPosition, 0);
+
+                scene.add(cardGroup);
+                
+                this.cards.push(card);
+                
+                // Ajouter l'événement de clic pour retourner la carte
+                cardMesh.userData = { card: card, floor: this };
+                
+                return card;
+            }
+            
+            createCardText(cardGroup, data) {
+                // Créer un canvas pour le texte
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = 512;
+                canvas.height = 512;
+                
+                // Style du texte
+                context.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Titre
+                context.fillStyle = 'white';
+                context.font = 'bold 48px Arial';
+                context.textAlign = 'center';
+                context.fillText(data.title, canvas.width/2, 200);
+                
+                // Sous-titre
+                context.font = '32px Arial';
+                context.fillStyle = '#cccccc';
+                
+                // Diviser le sous-titre en lignes si nécessaire
+                const maxWidth = canvas.width - 40;
+                const words = data.subtitle.split(' ');
+                let line = '';
+                let y = 280;
+                
+                for (let n = 0; n < words.length; n++) {
+                    const testLine = line + words[n] + ' ';
+                    const metrics = context.measureText(testLine);
+                    const testWidth = metrics.width;
+                    
+                    if (testWidth > maxWidth && n > 0) {
+                        context.fillText(line, canvas.width/2, y);
+                        line = words[n] + ' ';
+                        y += 40;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                context.fillText(line, canvas.width/2, y);
+                
+                // Créer la texture
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.needsUpdate = true;
+                
+                // Créer le matériau pour le texte
+                const textMaterial = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                
+                // Créer la géométrie pour le texte (légèrement plus petite que la carte)
+                const textGeometry = new THREE.PlaneGeometry(2.8, 3.8);
+                const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+                
+                // Positionner le texte légèrement devant la carte
+                textMesh.position.z = 0.06;
+                
+                cardGroup.add(textMesh);
+                
+                return textMesh; // Retourner la référence pour pouvoir la manipuler
+            }
+            
+            flipCard(card) {
+                if (!card.isFlipped) {
+                    // Retourner la carte pour montrer la définition
+                    card.isFlipped = true;
+                    
+                    // Masquer le texte original
+                    if (card.textMesh) {
+                        card.textMesh.visible = false;
+                    }
+                    
+                    // Créer le texte de définition
+                    const definitionMesh = this.createDefinitionText(card.group, card.definition);
+                    card.definitionMesh = definitionMesh;
+                    
+                    // Animation de retournement
+                    animateProperty(card.group.rotation, 'y', card.group.rotation.y, card.group.rotation.y + Math.PI, 800, easeOutBack);
+                    
+                } else {
+                    // Remettre la carte normale
+                    card.isFlipped = false;
+                    
+                    // Masquer la définition
+                    if (card.definitionMesh) {
+                        card.group.remove(card.definitionMesh);
+                        card.definitionMesh = null;
+                    }
+                    
+                    // Réafficher le texte original
+                    if (card.textMesh) {
+                        card.textMesh.visible = true;
+                    }
+                    
+                    // Animation de retournement
+                    animateProperty(card.group.rotation, 'y', card.group.rotation.y, card.group.rotation.y + Math.PI, 800, easeOutBack);
+                }
+            }
+            
+            createDefinitionText(cardGroup, definition) {
+                // Créer un canvas pour la définition
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = 512;
+                canvas.height = 512;
+                
+                // Fond sombre
+                context.fillStyle = 'rgba(20, 20, 20, 0.95)';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Titre en vert
+                context.fillStyle = '#4ade80';
+                context.font = 'bold 32px Arial';
+                context.textAlign = 'center';
+                context.fillText('Définition', canvas.width/2, 50);
+                
+                // Définition en blanc
+                context.fillStyle = 'white';
+                context.font = '24px Arial';
+                context.textAlign = 'left';
+                
+                // Diviser la définition en lignes
+                const maxWidth = canvas.width - 40;
+                const words = definition.definition.split(' ');
+                let line = '';
+                let y = 100;
+                
+                for (let n = 0; n < words.length; n++) {
+                    const testLine = line + words[n] + ' ';
+                    const metrics = context.measureText(testLine);
+                    const testWidth = metrics.width;
+                    
+                    if (testWidth > maxWidth && n > 0) {
+                        context.fillText(line, 20, y);
+                        line = words[n] + ' ';
+                        y += 30;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                context.fillText(line, 20, y);
+                
+                // Titre "Code" en vert
+                y += 50;
+                context.fillStyle = '#4ade80';
+                context.font = 'bold 28px Arial';
+                context.textAlign = 'center';
+                context.fillText('Code', canvas.width/2, y);
+                
+                // Code en jaune avec police monospace
+                y += 40;
+                context.fillStyle = '#fbbf24';
+                context.font = '18px monospace';
+                context.textAlign = 'left';
+                
+                // Diviser le code en lignes
+                const codeLines = definition.code.split('\n');
+                codeLines.forEach(codeLine => {
+                    if (y < canvas.height - 20) {
+                        context.fillText(codeLine, 20, y);
+                        y += 25;
+                    }
+                });
+                
+                // Créer la texture
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.needsUpdate = true;
+                
+                // Créer le matériau pour la définition
+                const definitionMaterial = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    transparent: true,
+                    opacity: 0.95
+                });
+                
+                // Créer la géométrie pour la définition
+                const definitionGeometry = new THREE.PlaneGeometry(2.8, 3.8);
+                const definitionMesh = new THREE.Mesh(definitionGeometry, definitionMaterial);
+                
+                // Positionner la définition légèrement devant la carte
+                definitionMesh.position.z = 0.06;
+                
+                cardGroup.add(definitionMesh);
+                
+                return definitionMesh;
+            }
+            
+            startCardSequence() {
+                if (!this.animationRunning) return;
+                this.showNextCard();
+            }
+
+            showNextCard() {
+                const floorCardData = techCardData[this.floorIndex] || [];
+                if (this.currentCardIndex < floorCardData.length && this.animationRunning) {
+                    const card = this.createCard(floorCardData[this.currentCardIndex], this.currentCardIndex);
+                    
+                    // Calculer la position finale
+                    if (this.currentCardIndex === 0) {
+                        // Première carte : va jusqu'au côté gauche
+                        card.finalX = -12; // Côté gauche de l'écran
+                    } else {
+                        // Cartes suivantes : se placent à côté de la précédente
+                        const previousCard = this.cards[this.currentCardIndex - 1];
+                        card.finalX = previousCard.finalX + 0.12;
+                    }
+                    
+                    // Afficher les informations de la carte (seulement pour l'étage 0)
+                    if (this.floorIndex === 0) {
+                        showCardInfo(card.data);
+                    }
+                    
+                    // Animation de déplacement depuis la droite vers la position finale
+                    this.animateCardMovement(card);
+                    
+                    this.currentCardIndex++;
+                    
+                    // Programmer la prochaine carte après un délai
+                    setTimeout(() => {
+                        if (this.animationRunning && this.currentCardIndex < floorCardData.length) {
+                            this.showNextCard();
+                        } else if (this.currentCardIndex >= floorCardData.length) {
+                            // Toutes les cartes sont placées, les recentrer puis recommencer
+                            setTimeout(() => {
+                                this.centerAllCards();
+                            }, 1000);
+                        }
+                    }, 100);
+                }
+            }
+            
+            centerAllCards() {
+                if (this.cards.length === 0) return;
+                
+                // Calculer la position du centre de toutes les cartes
+                const firstCardX = this.cards[0].finalX;
+                const lastCardX = this.cards[this.cards.length - 1].finalX;
+                const groupCenter = (firstCardX + lastCardX) / 2;
+                
+                // Calculer le décalage nécessaire pour centrer le groupe
+                const offsetToCenter = 0 - groupCenter; // 0 est le centre de l'écran
+                
+                // Animer toutes les cartes vers leur nouvelle position centrée
+                this.cards.forEach((card, index) => {
+                    const targetX = card.finalX + offsetToCenter;
+                    
+                    // Animation de déplacement vers la nouvelle position
+                    animateProperty(card.group.position, 'x', card.group.position.x, targetX, 1500, easeOutBack);
+                    
+                    // Mettre à jour la position finale pour les futures références
+                    card.finalX = targetX;
+                });
+                
+                // Attendre la fin de l'animation de centrage puis espacer
+                setTimeout(() => {
+                    this.spaceOutCards();
+                }, 2000);
+            }
+            
+            spaceOutCards() {
+                if (this.cards.length === 0) return;
+                
+                // Calculer l'espacement
+                const spacing = 3.08;
+                
+                // Calculer la largeur totale du groupe espacé
+                const totalWidth = (this.cards.length - 1) * spacing;
+                const startX = -totalWidth / 2; // Commencer à gauche du centre
+                
+                // Animer chaque carte vers sa nouvelle position espacée
+                this.cards.forEach((card, index) => {
+                    const targetX = startX + (index * spacing);
+                    
+                    // Animation de déplacement vers la nouvelle position espacée
+                    animateProperty(card.group.position, 'x', card.group.position.x, targetX, 1500, easeOutBack);
+                    
+                    // Calculer la couleur du dégradé (blanc -> gris -> noir)
+                    const progress = index / (this.cards.length - 1); // 0 à 1
+                    let gradientColor;
+                    
+                    if (progress <= 0.5) {
+                        // Première moitié : blanc vers gris
+                        const localProgress = progress * 2; // 0 à 1
+                        const grayValue = Math.floor(255 * (1 - localProgress * 0.5)); // 255 à 128
+                        gradientColor = new THREE.Color(`rgb(${grayValue}, ${grayValue}, ${grayValue})`);
+                    } else {
+                        // Deuxième moitié : gris vers noir
+                        const localProgress = (progress - 0.5) * 2; // 0 à 1
+                        const grayValue = Math.floor(128 * (1 - localProgress)); // 128 à 0
+                        gradientColor = new THREE.Color(`rgb(${grayValue}, ${grayValue}, ${grayValue})`);
+                    }
+                    
+                    // Animation de rotation pour mettre la carte de face (de 90° à 0°)
+                    setTimeout(() => {
+                        animateProperty(card.group.rotation, 'y', Math.PI / 2, 0, 1000, easeOutBack);
+                        
+                        // Animer la couleur vers le dégradé
+                        animateColorProperty(card.mesh.material, 'color', card.mesh.material.color, gradientColor, 1000);
+                    }, 500 + index * 100); // Décalage pour un effet en cascade
+                    
+                    // Mettre à jour la position finale
+                    card.finalX = targetX;
+                });
+                
+                // Attendre la fin de l'animation d'espacement puis démarrer le carrousel
+                setTimeout(() => {
+                    this.startCarousel();
+                }, 3000); // Temps pour voir les cartes de face avant le carrousel
+            }
+            
+            startCarousel() {
+                if (this.carouselRunning) return;
+                this.carouselRunning = true;
+                this.manualControl = false;
+                this.rotationOffset = 0;
+                this.independentTime = 0; // Initialiser le temps indépendant à zéro
+                
+                // Afficher le titre de l'étage de façon permanente
+                this.showFloorTitlePermanent();
+                
+                // Activer le zoom quand au moins un carrousel démarre
+                canZoom = true;
+                
+                // Calculer les positions initiales du cercle
+                const angleStep = (Math.PI * 2) / this.cards.length;
+                
+                // Animer chaque carte vers sa position sur le cercle
+                this.cards.forEach((card, index) => {
+                    const angle = index * angleStep;
+                    const targetX = Math.cos(angle) * carouselRadius;
+                    const targetZ = Math.sin(angle) * carouselRadius;
+                    
+                    // Animation vers la position circulaire
+                    animateProperty(card.group.position, 'x', card.group.position.x, targetX, 2000, easeOutBack);
+                    animateProperty(card.group.position, 'z', card.group.position.z, targetZ, 2000, easeOutBack);
+                    
+                    // Stocker l'angle initial pour la rotation continue
+                    card.initialAngle = angle;
+                });
+                
+                // Démarrer la rotation continue après l'animation de positionnement
+                setTimeout(() => {
+                    this.animateCarousel();
+                }, 2000);
+            }
+            
+            showFloorTitlePermanent() {
+                const titleElement = document.getElementById(`floorTitle${this.floorIndex}`);
+                if (titleElement) {
+                    titleElement.classList.add('visible');
+                    // Ajouter l'événement de clic
+                    titleElement.addEventListener('click', () => {
+                        this.toggleCarousel();
+                    });
+                }
+            }
+            
+            toggleCarousel() {
+                if (this.carouselRunning) {
+                    // Arrêter le carrousel
+                    this.carouselRunning = false;
+                    this.manualControl = false;
+                    
+                    // Changer le style du titre pour indiquer l'arrêt
+                    const titleElement = document.getElementById(`floorTitle${this.floorIndex}`);
+                    if (titleElement) {
+                        titleElement.style.background = 'rgba(255,0,0,0.5)';
+                        titleElement.style.borderColor = 'rgba(255,100,100,0.6)';
+                    }
+                } else if (this.cards.length > 0) {
+                    // Redémarrer le carrousel
+                    this.independentTime = 0; // Nouveau temps de départ à zéro
+                    this.startCarousel();
+                    
+                    // Remettre le style normal du titre
+                    const titleElement = document.getElementById(`floorTitle${this.floorIndex}`);
+                    if (titleElement) {
+                        titleElement.style.background = 'rgba(0,0,0,0.5)';
+                        titleElement.style.borderColor = 'rgba(255,255,255,0.3)';
+                    }
+                }
+            }
+            
+            animateCarousel() {
+                if (!this.carouselRunning) return;
+                
+                let time;
+                if (this.manualControl) {
+                    // Mode manuel : utiliser l'offset de rotation
+                    time = this.rotationOffset;
+                } else {
+                    // Mode automatique : temps absolu
+                    this.independentTime += 0.005; // Vitesse réduite pour rotation plus lente
+                    time = this.independentTime;
+                }
+                
+                // Faire tourner toutes les cartes autour du centre
+                this.cards.forEach((card, index) => {
+                    // Utiliser le temps absolu + l'offset initial pour une vitesse constante
+                    const currentAngle = time + card.initialAngle;
+                    
+                    const x = Math.cos(currentAngle) * carouselRadius;
+                    const z = Math.sin(currentAngle) * carouselRadius;
+                    
+                    card.group.position.x = x;
+                    card.group.position.z = z;
+                    
+                    // Faire tourner les cartes sur elles-mêmes
+                    if (this.manualControl) {
+                        card.group.rotation.y = time * 0.1;
+                    } else {
+                        card.group.rotation.y = time * 0.1;
+                    }
+                });
+                
+                requestAnimationFrame(() => this.animateCarousel());
+            }
+            
+            stopCarousel() {
+                this.carouselRunning = false;
+                
+                // Vérifier si tous les carrousels sont arrêtés
+                const anyCarouselRunning = floors.some(floor => floor.carouselRunning);
+                if (!anyCarouselRunning) {
+                    canZoom = false;
+                }
+                
+                // Attendre un peu puis redémarrer l'animation complète
+                setTimeout(() => {
+                    if (this.animationRunning) {
+                        this.resetCards();
+                    }
+                }, 5000); // 5 secondes de carrousel
+            }
+            
+            animateCardMovement(card) {
+                const startX = card.group.position.x;
+                const targetX = card.finalX;
+                const duration = 1350;
+                
+                // Animation de déplacement fluide
+                animateProperty(card.group.position, 'x', startX, targetX, duration, easeOutBack);
+                
+                // Légère animation de rebond vertical
+                setTimeout(() => {
+                    animateProperty(card.group.position, 'y', this.yPosition, this.yPosition + 0.5, 300, easeOutQuad);
+                    setTimeout(() => {
+                        animateProperty(card.group.position, 'y', this.yPosition + 0.5, this.yPosition, 300, easeInQuad);
+                    }, 300);
+                }, duration - 600);
+            }
+            
+            resetCards() {
+                // Supprimer toutes les cartes de la scène
+                this.cards.forEach(card => {
+                    scene.remove(card.group);
+                });
+                
+                // Réinitialiser les variables
+                this.cards = [];
+                this.currentCardIndex = 0;
+                this.carouselRunning = false;
+                this.manualControl = false;
+                this.rotationOffset = 0;
+                this.independentTime = 0;
+                
+                // Ajouter la méthode flipCard
+                this.flipCard = this.flipCard.bind(this);
+                
+                // Masquer le titre
+                const titleElement = document.getElementById(`floorTitle${this.floorIndex}`);
+                if (titleElement) {
+                    titleElement.classList.remove('visible');
+                }
+                
+                // Redémarrer la séquence
+                setTimeout(() => {
+                    if (this.animationRunning) {
+                        this.startCardSequence();
+                    }
+                }, 1000);
+            }
+        }
+
+        // Attendre que Three.js soit chargé
+        function waitForThree() {
+            if (typeof THREE !== 'undefined') {
+                console.log('Three.js chargé avec succès');
+                initAnimation();
+            } else {
+                console.log('Attente de Three.js...');
+                setTimeout(waitForThree, 100);
+            }
+        }
+
+        function initAnimation() {
+            try {
+                // Création de la scène
+                scene = new THREE.Scene();
+                scene.fog = new THREE.Fog(0x0a0a0a, 10, 100);
+
+                // Caméra positionnée pour voir tous les étages
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+                camera.position.set(0, 20, 50); // Position plus haute et plus loin
+                camera.lookAt(0, 16, 0); // Regarder vers le milieu des étages
+
+                // Renderer
+                renderer = new THREE.WebGLRenderer({ 
+                    antialias: true, 
+                    alpha: true,
+                    powerPreference: "high-performance"
+                });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setClearColor(0x0a0a0a, 1);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                
+                const container = document.getElementById('container');
+                container.appendChild(renderer.domElement);
+                
+                // Définir canvas globalement
+                canvas = renderer.domElement;
+
+                // Éclairage
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+                directionalLight.position.set(20, 40, 10);
+                directionalLight.castShadow = true;
+                directionalLight.shadow.mapSize.width = 2048;
+                directionalLight.shadow.mapSize.height = 2048;
+                scene.add(directionalLight);
+
+                // Sol agrandi pour les ombres
+                const floorGeometry = new THREE.PlaneGeometry(300, 300);
+                const floorMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0x222222, 
+                    transparent: true, 
+                    opacity: 0.3 
+                });
+                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.y = -10;
+                floor.receiveShadow = true;
+                scene.add(floor);
+
+                // Masquer le loading
+                document.getElementById('loading').style.display = 'none';
+                
+                // Créer les 5 étages
+                for (let i = 0; i < 5; i++) {
+                    floors.push(new Floor(i));
+                }
+                
+                // Démarrer l'animation
+                animate();
+                
+                console.log('Animation initialisée avec succès - 5 étages');
+                
+            } catch (error) {
+                console.error('Erreur lors de l\'initialisation:', error);
+                document.getElementById('loading').innerHTML = 'Erreur de chargement: ' + error.message;
+            }
+        }
+
+        function showCardInfo(data) {
+            const cardInfo = document.getElementById('cardInfo');
+            const title = document.getElementById('cardTitle');
+            const subtitle = document.getElementById('cardSubtitle');
+            
+            title.textContent = data.title;
+            subtitle.textContent = data.subtitle;
+            cardInfo.classList.add('visible');
+        }
+
+        function hideCardInfo() {
+            const cardInfo = document.getElementById('cardInfo');
+            cardInfo.classList.remove('visible');
+        }
+
+        // Fonctions d'animation personnalisées
+        function animateProperty(object, property, from, to, duration, easing) {
+            const startTime = Date.now();
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easedProgress = easing(progress);
+                
+                object[property] = from + (to - from) * easedProgress;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            };
+            animate();
+        }
+
+        function animateColorProperty(material, property, fromColor, toColor, duration) {
+            const startTime = Date.now();
+            const startR = fromColor.r;
+            const startG = fromColor.g;
+            const startB = fromColor.b;
+            
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easedProgress = easeOutQuad(progress);
+                
+                material[property].r = startR + (toColor.r - startR) * easedProgress;
+                material[property].g = startG + (toColor.g - startG) * easedProgress;
+                material[property].b = startB + (toColor.b - startB) * easedProgress;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            };
+            animate();
+        }
+
+        // Fonctions d'easing
+        function easeOutBack(t) {
+            const c1 = 1.70158;
+            const c3 = c1 + 1;
+            return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        }
+
+        function easeOutQuad(t) {
+            return 1 - (1 - t) * (1 - t);
+        }
+
+        function easeInQuad(t) {
+            return t * t;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Animation subtile de la caméra avec zoom
+            const time = Date.now() * 0.0005;
+            camera.position.y = baseCameraY + cameraOffsetY + Math.sin(time) * 3;
+            
+            // Appliquer le zoom
+            const targetDistance = baseDistance / zoomLevel;
+            camera.position.z = targetDistance;
+            camera.lookAt(0, 16 + cameraOffsetY, 0);
+            
+            // Mettre à jour les positions des titres
+            floors.forEach(floor => {
+                if (floor.carouselRunning) {
+                    floor.animateCarousel();
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+        
+        // Ajouter tous les event listeners après que canvas soit défini
+        setupEventListeners();
+        
+        function setupEventListeners() {
+            if (!canvas) return;
+            
+            // Event listener pour mouseup
+            canvas.addEventListener('mouseup', (event) => {
+                if (isDragging) {
+                    // Si le mouvement était minimal, considérer comme un clic
+                    const deltaMove = {
+                        x: event.clientX - previousMousePosition.x,
+                        y: event.clientY - previousMousePosition.y
+                    };
+                    const moveDistance = Math.sqrt(deltaMove.x * deltaMove.x + deltaMove.y * deltaMove.y);
+                    
+                    if (moveDistance < 5) { // Seuil de 5 pixels pour considérer comme un clic
+                        // Détection de clic sur les cartes
+                        const rect = canvas.getBoundingClientRect();
+                        const mouse = new THREE.Vector2();
+                        mouse.x = ((event.clientX - rect.left) / canvas.clientWidth) * 2 - 1;
+                        mouse.y = -((event.clientY - rect.top) / canvas.clientHeight) * 2 + 1;
+
+                        const raycaster = new THREE.Raycaster();
+                        raycaster.setFromCamera(mouse, camera);
+
+                        // Vérifier les intersections avec toutes les cartes de tous les étages
+                        const allCards = [];
+                        floors.forEach(floor => {
+                            floor.cards.forEach(card => {
+                                allCards.push(card.mesh);
+                            });
+                        });
+
+                        const intersects = raycaster.intersectObjects(allCards);
+                        if (intersects.length > 0) {
+                            isCardClicked = true;
+                            const clickedMesh = intersects[0].object;
+                            
+                            // Trouver la carte correspondante
+                            floors.forEach(floor => {
+                                floor.cards.forEach(card => {
+                                    if (card.mesh === clickedMesh) {
+                                        floor.flipCard(card);
+                                    }
+                                });
+                            });
+                        }
+                    }
+                }
+                
+                isDragging = false;
+            });
+
+            // Event listener pour mouseleave
+            canvas.addEventListener('mouseleave', () => {
+                isDragging = false;
+            });
+
+            // Event listener pour wheel (zoom)
+            canvas.addEventListener('wheel', (event) => {
+                event.preventDefault();
+                const zoomSpeed = 0.1;
+                const delta = event.deltaY;
+                
+                if (delta < 0) {
+                    zoomLevel = Math.min(zoomLevel + zoomSpeed, 3);
+                } else {
+                    zoomLevel = Math.max(zoomLevel - zoomSpeed, 0.5);
+                }
+            });
+
+            // Event listener pour les clics
+            canvas.addEventListener('click', (event) => {
+                const intersects = raycaster.intersectObjects(clickableObjects);
+                
+                if (intersects.length > 0) {
+                    const clickedMesh = intersects[0].object;
+                    const cardData = clickedMesh.userData;
+                    
+                    if (cardData && cardData.card) {
+                        // Clic sur une carte - la retourner
+                        cardData.floor.flipCard(cardData.card);
+                        event.preventDefault();
+                        return;
+                    }
+                }
+                
+                // Si pas de carte cliquée, vérifier pour le contrôle de carrousel
+                const mouseY = event.clientY;
+                const screenHeight = window.innerHeight;
+                const relativeY = mouseY / screenHeight;
+                
+                let targetFloorIndex = Math.floor((1 - relativeY) * 5);
+                targetFloorIndex = Math.max(0, Math.min(4, targetFloorIndex));
+                
+                if (floors[targetFloorIndex] && floors[targetFloorIndex].carouselRunning) {
+                    isDragging = true;
+                    selectedFloor = floors[targetFloorIndex];
+                    lastMouseX = event.clientX;
+                    selectedFloor.manualControl = true;
+                    document.body.style.cursor = 'grabbing';
+                    event.preventDefault();
+                }
+            });
+        }
+
+        // Gestion du redimensionnement
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+
+        // Gestion du zoom avec la molette
+        window.addEventListener('wheel', (event) => {
+            if (!canZoom) return;
+            if (isDragging) return; // Pas de zoom pendant le drag
+            
+            event.preventDefault();
+            
+            // Ajuster le niveau de zoom
+            const zoomSpeed = 0.1;
+            if (event.deltaY < 0) {
+                // Zoom avant
+                zoomLevel = Math.min(zoomLevel + zoomSpeed, 3); // Max zoom x3
+            } else {
+                // Zoom arrière
+                zoomLevel = Math.max(zoomLevel - zoomSpeed, 0.5); // Min zoom x0.5
+            }
+        });
+
+        // Contrôles clavier
+        window.addEventListener('keydown', (event) => {
+            switch(event.code) {
+                case 'ArrowUp':
+                    event.preventDefault();
+                    if (canZoom) {
+                        cameraOffsetY = Math.min(cameraOffsetY + 2, 20); // Limite haute
+                    }
+                    break;
+                case 'ArrowDown':
+                    event.preventDefault();
+                    if (canZoom) {
+                        cameraOffsetY = Math.max(cameraOffsetY - 2, -20); // Limite basse
+                    }
+                    break;
+                case 'Space':
+                    event.preventDefault();
+                    // Redémarrer toutes les animations
+                    floors.forEach(floor => {
+                        if (!floor.animationRunning) {
+                            floor.animationRunning = true;
+                            floor.startCardSequence();
+                        }
+                    });
+                    canZoom = false; // Désactiver le zoom lors du redémarrage
+                    break;
+                case 'KeyR':
+                    event.preventDefault();
+                    // Redémarrer tous les étages
+                    canZoom = false;
+                    zoomLevel = 1; // Reset du zoom
+                    cameraOffsetY = 0; // Reset de la position verticale
+                    floors.forEach((floor, index) => {
+                        floor.animationRunning = false;
+                        floor.carouselRunning = false;
+                        setTimeout(() => {
+                            floor.resetCards();
+                            floor.animationRunning = true;
+                            floor.startCardSequence();
+                        }, index * 500); // Décalage pour l'effet visuel
+                    });
+                    break;
+                case 'KeyC':
+                    event.preventDefault();
+                    // Contrôler les carrousels de tous les étages
+                    floors.forEach(floor => {
+                        if (floor.carouselRunning) {
+                            floor.stopCarousel();
+                        } else if (floor.cards.length > 0) {
+                            floor.startCarousel();
+                        }
+                    });
+                    break;
+            }
+        });
+
+
+        // Fonction pour faire tourner une carte
+        Floor.prototype.flipCard = function(card) {
+            if (card.isFlipping) return; // Éviter les animations multiples
+            
+            card.isFlipping = true;
+            const startRotation = card.mesh.rotation.y;
+            const targetRotation = startRotation + Math.PI;
+            const duration = 600; // ms
+            const startTime = Date.now();
+            
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Courbe d'easing cubic-out
+                const easeProgress = 1 - Math.pow(1 - progress, 3);
+                
+                card.mesh.rotation.y = startRotation + (targetRotation - startRotation) * easeProgress;
+                
+                // Changer la texture à mi-parcours
+                if (progress >= 0.5 && !card.textureChanged) {
+                    card.textureChanged = true;
+                    card.isFlipped = !card.isFlipped;
+                    card.mesh.material.map = card.isFlipped ? card.backTexture : card.frontTexture;
+                    card.mesh.material.needsUpdate = true;
+                }
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    card.isFlipping = false;
+                    card.textureChanged = false;
+                }
+            };
+            
+            animate();
+        };
+
+        // Fonction pour créer une carte
+        Floor.prototype.createCard = function(concept, index) {
+            // Créer les textures
+            const frontTexture = this.createCardTexture(concept.title, concept.definition, concept.code, false);
+            const backTexture = this.createCardTexture(concept.title, concept.definition, concept.code, true);
+            
+            const card = {
+                mesh: new THREE.Mesh(
+                    new THREE.PlaneGeometry(4, 2),
+                    new THREE.MeshBasicMaterial({ 
+                        map: frontTexture,
+                        transparent: true,
+                        alphaTest: 0.1
+                    })
+                ),
+                frontTexture: frontTexture,
+                backTexture: backTexture,
+                isFlipped: false,
+                isFlipping: false,
+                textureChanged: false
+            };
+            
+            // Position initiale
+            const angle = (index / this.concepts.length) * Math.PI * 2;
+            const radius = 8;
+            card.mesh.position.x = Math.cos(angle) * radius;
+            card.mesh.position.z = Math.sin(angle) * radius;
+            card.mesh.position.y = this.y;
+            
+            // Orienter la carte vers le centre
+            card.mesh.lookAt(0, this.y, 0);
+            
+            this.group.add(card.mesh);
+            return card;
+        };
+
+        // Fonction pour faire tourner les cartes
+        Floor.prototype.rotateCards = function() {
+            if (!this.isRotating) return;
+            
+            this.cards.forEach((card, index) => {
+                const baseAngle = (index / this.concepts.length) * Math.PI * 2;
+                const currentAngle = baseAngle + this.currentRotation;
+                const radius = 8;
+                
+                // Position de base (rotation du carrousel)
+                const baseX = Math.cos(currentAngle) * radius;
+                const baseZ = Math.sin(currentAngle) * radius;
+                
+                // Appliquer la position
+                card.mesh.position.x = baseX;
+                card.mesh.position.z = baseZ;
+                
+                // Orientation vers le centre (seulement si pas en train de se retourner)
+                if (!card.isFlipping) {
+                    card.mesh.lookAt(0, this.y, 0);
+                }
+            });
+            
+            this.currentRotation += 0.005;
+        };
+
+        // Fonction pour créer la texture d'une carte
+        Floor.prototype.createCardTexture = function(title, definition, code, isBack) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            if (isBack) {
+                // Face arrière - fond bleu avec motif
+                const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                gradient.addColorStop(0, '#1e3a8a');
+                gradient.addColorStop(1, '#3b82f6');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Motif décoratif
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 10; i++) {
+                    ctx.beginPath();
+                    ctx.arc(canvas.width/2, canvas.height/2, 50 + i * 30, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            } else {
+                // Face avant - contenu
+                const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                gradient.addColorStop(0, '#f8fafc');
+                gradient.addColorStop(1, '#e2e8f0');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Bordure
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+                
+                // Titre
+                ctx.fillStyle = '#059669';
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(title, canvas.width / 2, 80);
+                
+                // Définition
+                ctx.fillStyle = '#374151';
+                ctx.font = '24px Arial';
+                const words = definition.split(' ');
+                let line = '';
+                let y = 140;
+                const maxWidth = canvas.width - 60;
+                
+                for (let n = 0; n < words.length; n++) {
+                    const testLine = line + words[n] + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    const testWidth = metrics.width;
+                    if (testWidth > maxWidth && n > 0) {
+                        ctx.fillText(line, canvas.width / 2, y);
+                        line = words[n] + ' ';
+                        y += 35;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                ctx.fillText(line, canvas.width / 2, y);
+                
+                // Code
+                if (code) {
+                    ctx.fillStyle = '#dc2626';
+                    ctx.font = '20px Courier New';
+                    ctx.textAlign = 'left';
+                    const codeLines = code.split('\n');
+                    let codeY = y + 60;
+                    codeLines.forEach(codeLine => {
+                        ctx.fillText(codeLine, 40, codeY);
+                        codeY += 30;
+                    });
+                }
+            }
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.generateMipmaps = false;
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            return texture;
+        };
+
+        // Fonction pour démarrer la séquence d'apparition des cartes
+        Floor.prototype.startCardSequence = function() {
+            let index = 0;
+            const showNext = () => {
+                if (index < this.concepts.length) {
+                    this.showNextCard();
+                    index++;
+                    setTimeout(showNext, 200);
+                } else {
+                    this.isRotating = true;
+                }
+            };
+            showNext();
+        };
+
+        // Fonction pour afficher la prochaine carte
+        Floor.prototype.showNextCard = function() {
+            if (this.currentCardIndex < this.concepts.length) {
+                const concept = this.concepts[this.currentCardIndex];
+                const card = this.createCard(concept, this.currentCardIndex);
+                
+                // Animation d'apparition
+                card.mesh.scale.set(0, 0, 0);
+                this.cards.push(card);
+                
+                // Animation de scale
+                const startTime = Date.now();
+                const duration = 500;
+                
+                const animate = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const scale = progress;
+                    
+                    card.mesh.scale.set(scale, scale, scale);
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    }
+                };
+                
+                animate();
+                this.currentCardIndex++;
+            }
+        };
+
+        // Créer les étages
+        // const floors = []; // Déjà déclaré plus haut
+        
+        // Étage 1 - Concepts de base
+        const floor1Concepts = [
+            {
+                title: "Variable",
+                definition: "Une variable est un conteneur qui stocke une valeur qui peut changer pendant l'exécution du programme.",
+                code: "let nom = 'Alice';\nnom = 'Bob';"
+            },
+            {
+                title: "Fonction",
+                definition: "Une fonction est un bloc de code réutilisable qui effectue une tâche spécifique.",
+                code: "function saluer(nom) {\n  return 'Bonjour ' + nom;\n}"
+            },
+            {
+                title: "Boucle",
+                definition: "Une boucle permet de répéter un bloc de code plusieurs fois.",
+                code: "for (let i = 0; i < 5; i++) {\n  console.log(i);\n}"
+            },
+            {
+                title: "Condition",
+                definition: "Une condition permet d'exécuter du code seulement si certains critères sont remplis.",
+                code: "if (age >= 18) {\n  console.log('Majeur');\n}"
+            },
+            {
+                title: "Tableau",
+                definition: "Un tableau est une structure de données qui stocke plusieurs valeurs dans une seule variable.",
+                code: "let fruits = ['pomme', 'banane'];\nfruits.push('orange');"
+            },
+            {
+                title: "Objet",
+                definition: "Un objet est une collection de propriétés, chaque propriété étant une association entre un nom et une valeur.",
+                code: "let personne = {\n  nom: 'Alice',\n  age: 25\n};"
+            }
+        ];
+        
+        const floor1 = new Floor(floor1Concepts, 0, 'Concepts de Base');
+        floors.push(floor1);
+        
+        // Étage 2 - Concepts avancés
+        const floor2Concepts = [
+            {
+                title: "Classe",
+                definition: "Une classe est un modèle pour créer des objets avec des propriétés et méthodes communes.",
+                code: "class Voiture {\n  constructor(marque) {\n    this.marque = marque;\n  }\n}"
+            },
+            {
+                title: "Promise",
+                definition: "Une Promise représente une valeur qui peut être disponible maintenant, dans le futur, ou jamais.",
+                code: "fetch('/api/data')\n  .then(response => response.json())\n  .then(data => console.log(data));"
+            },
+            {
+                title: "Async/Await",
+                definition: "Async/await permet d'écrire du code asynchrone de manière synchrone et plus lisible.",
+                code: "async function getData() {\n  const response = await fetch('/api');\n  return await response.json();\n}"
+            },
+            {
+                title: "Closure",
+                definition: "Une closure est une fonction qui a accès aux variables de son environnement lexical externe.",
+                code: "function outer(x) {\n  return function(y) {\n    return x + y;\n  };\n}"
+            },
+            {
+                title: "Destructuring",
+                definition: "Le destructuring permet d'extraire des valeurs d'objets ou de tableaux dans des variables distinctes.",
+                code: "const {nom, age} = personne;\nconst [premier, second] = tableau;"
+            },
+            {
+                title: "Module",
+                definition: "Un module est un fichier contenant du code JavaScript qui peut être importé et utilisé dans d'autres fichiers.",
+                code: "// export\nexport const PI = 3.14;\n// import\nimport { PI } from './math.js';"
+            }
+        ];
+        
+        const floor2 = new Floor(floor2Concepts, 10, 'Concepts Avancés');
+        floors.push(floor2);
+        
+        // Étage 3 - Patterns et Architecture
+        const floor3Concepts = [
+            {
+                title: "MVC",
+                definition: "Model-View-Controller est un pattern architectural qui sépare la logique métier, l'interface utilisateur et le contrôle.",
+                code: "// Model\nclass UserModel {\n  constructor(data) {\n    this.data = data;\n  }\n}"
+            },
+            {
+                title: "Observer",
+                definition: "Le pattern Observer permet à un objet de notifier automatiquement une liste d'observateurs de tout changement d'état.",
+                code: "class Subject {\n  constructor() {\n    this.observers = [];\n  }\n  notify(data) {\n    this.observers.forEach(obs => obs.update(data));\n  }\n}"
+            },
+            {
+                title: "Singleton",
+                definition: "Le pattern Singleton garantit qu'une classe n'a qu'une seule instance et fournit un point d'accès global.",
+                code: "class Singleton {\n  static getInstance() {\n    if (!this.instance) {\n      this.instance = new Singleton();\n    }\n    return this.instance;\n  }\n}"
+            },
+            {
+                title: "Factory",
+                definition: "Le pattern Factory crée des objets sans spécifier leur classe exacte, en utilisant une interface commune.",
+                code: "class AnimalFactory {\n  static create(type) {\n    switch(type) {\n      case 'dog': return new Dog();\n      case 'cat': return new Cat();\n    }\n  }\n}"
+            },
+            {
+                title: "Decorator",
+                definition: "Le pattern Decorator permet d'ajouter dynamiquement de nouvelles fonctionnalités à un objet.",
+                code: "function logger(target, key, descriptor) {\n  const original = descriptor.value;\n  descriptor.value = function(...args) {\n    console.log('Calling:', key);\n    return original.apply(this, args);\n  };\n}"
+            },
+            {
+                title: "Strategy",
+                definition: "Le pattern Strategy définit une famille d'algorithmes et les rend interchangeables.",
+                code: "class PaymentStrategy {\n  pay(amount) { throw new Error('Must implement'); }\n}\n\nclass CreditCard extends PaymentStrategy {\n  pay(amount) { /* logic */ }\n}"
+            }
+        ];
+        
+        // Event listener pour les clics
+        canvas.addEventListener('click', (event) => {
+            const intersects = raycaster.intersectObjects(clickableObjects);
+            
+            if (intersects.length > 0) {
+                const clickedMesh = intersects[0].object;
+                const cardData = clickedMesh.userData;
+                
+                if (cardData && cardData.card) {
+                    // Clic sur une carte - la retourner
+                    cardData.floor.flipCard(cardData.card);
+                    event.preventDefault();
+                    return;
+                }
+            }
+            
+            // Si pas de carte cliquée, vérifier pour le contrôle de carrousel
+            const mouseY = event.clientY;
+            const screenHeight = window.innerHeight;
+            const relativeY = mouseY / screenHeight;
+            
+            let targetFloorIndex = Math.floor((1 - relativeY) * 5);
+            targetFloorIndex = Math.max(0, Math.min(4, targetFloorIndex));
+            
+            if (floors[targetFloorIndex] && floors[targetFloorIndex].carouselRunning) {
+                isDragging = true;
+                selectedFloor = floors[targetFloorIndex];
+                lastMouseX = event.clientX;
+                selectedFloor.manualControl = true;
+                document.body.style.cursor = 'grabbing';
+                event.preventDefault();
+            }
+        });
+
+        window.addEventListener('mousemove', (event) => {
+            if (!isDragging || !selectedFloor) return;
+            
+            const deltaX = event.clientX - lastMouseX;
+            const sensitivity = 0.005; // Sensibilité réduite pour plus de précision
+            
+            // Mettre à jour l'offset de rotation
+            selectedFloor.rotationOffset += deltaX * sensitivity;
+            
+            lastMouseX = event.clientX;
+            event.preventDefault();
+        });
+
+        window.addEventListener('mouseup', (event) => {
+            if (isDragging) {
+                isDragging = false;
+                selectedFloor = null;
+                document.body.style.cursor = 'default';
+                event.preventDefault();
+            }
+        });
+
+        // Gérer la sortie de la fenêtre
+        window.addEventListener('mouseleave', (event) => {
+            if (isDragging) {
+                isDragging = false;
+                selectedFloor = null;
+                document.body.style.cursor = 'default';
+            }
+        });
+
+        // Démarrer quand Three.js est prêt
+        waitForThree();
+    </script>
+</body>
+</html>

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio d'Architecture - Portfolio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            overflow-x: hidden;
+            background: #000;
+            color: #fff;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            padding: 30px 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            background: rgba(0, 0, 0, 0);
+        }
+
+        nav.scrolled {
+            background: rgba(0, 0, 0, 0.95);
+            padding: 20px 60px;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 300;
+            letter-spacing: 3px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 40px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            position: relative;
+            transition: opacity 0.3s;
+        }
+
+        .nav-links a:hover {
+            opacity: 0.7;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: #fff;
+            transition: width 0.3s;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        /* Section de base */
+        section {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Hero Section - Parallax Vertical */
+        #hero {
+            height: 120vh;
+        }
+
+        .parallax-bg {
+            position: absolute;
+            top: -20%;
+            left: 0;
+            width: 100%;
+            height: 140%;
+            background-image: url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=2000');
+            background-size: cover;
+            background-position: center;
+            will-change: transform;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .hero-content h1 {
+            font-size: clamp(50px, 8vw, 120px);
+            font-weight: 200;
+            letter-spacing: 10px;
+            margin-bottom: 20px;
+            opacity: 0;
+            animation: fadeInUp 1s ease forwards;
+        }
+
+        .hero-content p {
+            font-size: clamp(16px, 2vw, 24px);
+            font-weight: 300;
+            letter-spacing: 3px;
+            opacity: 0;
+            animation: fadeInUp 1s ease 0.3s forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+        }
+
+        /* Projects Section - Parallax Horizontal */
+        #projets {
+            background: #0a0a0a;
+            padding: 100px 0;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: clamp(40px, 6vw, 80px);
+            font-weight: 200;
+            letter-spacing: 5px;
+            margin-bottom: 80px;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease;
+        }
+
+        .section-title.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .horizontal-scroll-wrapper {
+            display: flex;
+            gap: 40px;
+            padding: 0 60px;
+            will-change: transform;
+            transition: transform 0.3s ease-out;
+        }
+
+        .project-card {
+            min-width: 600px;
+            height: 400px;
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.5s ease;
+        }
+
+        .project-card:hover {
+            transform: scale(1.05);
+        }
+
+        .project-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .project-card:hover img {
+            transform: scale(1.1);
+        }
+
+        .project-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 30px;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+        }
+
+        .project-overlay h3 {
+            font-size: 28px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .project-overlay p {
+            font-size: 14px;
+            letter-spacing: 1px;
+            opacity: 0.8;
+        }
+
+        /* About Section - Parallax en Profondeur (Zoom) */
+        #about {
+            position: relative;
+            height: 100vh;
+        }
+
+        .depth-parallax-bg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(1.5);
+            width: 100%;
+            height: 100%;
+            background-image: url('https://images.unsplash.com/photo-1503174971373-b1f69850bded?q=80&w=2000');
+            background-size: cover;
+            background-position: center;
+            will-change: transform;
+            filter: brightness(0.7);
+        }
+
+        .about-content {
+            position: relative;
+            z-index: 10;
+            max-width: 800px;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 1s ease;
+        }
+
+        .about-content.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .about-content h2 {
+            font-size: 48px;
+            font-weight: 200;
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+        }
+
+        .about-content p {
+            font-size: 18px;
+            line-height: 1.8;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        /* Services Section */
+        #services {
+            position: relative;
+            min-height: 100vh;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .services-bg {
+            position: absolute;
+            top: -20%;
+            left: 0;
+            width: 150%;
+            height: calc(140% + 100px);
+            background-image: url('https://images.unsplash.com/photo-1600607687644-c7171b42498f?q=80&w=2000');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0.6;
+            will-change: transform;
+            z-index: 1;
+        }
+
+        .services-content {
+            position: relative;
+            z-index: 10;
+            padding: 100px 60px;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .service-item {
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            transition: all 0.4s ease;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .service-item.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .service-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-10px);
+        }
+
+        .service-item h3 {
+            font-size: 24px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .service-item p {
+            font-size: 16px;
+            line-height: 1.6;
+            opacity: 0.8;
+        }
+
+        /* Contact Section */
+        #contact {
+            background: #0a0a0a;
+            padding: 100px 60px;
+            text-align: center;
+        }
+
+        .contact-content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .contact-info {
+            margin-top: 60px;
+            font-size: 20px;
+            letter-spacing: 2px;
+        }
+
+        .contact-info a {
+            color: #fff;
+            text-decoration: none;
+            transition: opacity 0.3s;
+        }
+
+        .contact-info a:hover {
+            opacity: 0.7;
+        }
+
+        /* Footer */
+        footer {
+            position: relative;
+            height: 60vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .footer-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?q=80&w=2000');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .footer-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+        }
+
+        .footer-content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .footer-content p {
+            font-size: 16px;
+            letter-spacing: 3px;
+            opacity: 0.8;
+            margin-bottom: 20px;
+        }
+
+        .footer-content .copyright {
+            font-size: 12px;
+            letter-spacing: 2px;
+            opacity: 0.6;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                padding: 20px 30px;
+            }
+
+            .nav-links {
+                gap: 20px;
+                font-size: 12px;
+            }
+
+            .project-card {
+                min-width: 90vw;
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav id="navbar">
+        <div class="logo">ARCHITECT</div>
+        <ul class="nav-links">
+            <li><a href="#hero">Accueil</a></li>
+            <li><a href="#projets">Projets</a></li>
+            <li><a href="#about">À Propos</a></li>
+            <li><a href="#services">Services</a></li>
+            <li><a href="#contact">Contact</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section - Parallax Vertical -->
+    <section id="hero">
+        <div class="parallax-bg"></div>
+        <div class="hero-content">
+            <h1>ARCHITECTURE</h1>
+            <p>Créer des espaces qui inspirent</p>
+        </div>
+    </section>
+
+    <!-- Projects Section - Parallax Horizontal -->
+    <section id="projets">
+        <h2 class="section-title">Nos Projets</h2>
+        <div class="horizontal-scroll-wrapper">
+            <div class="project-card">
+                <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=800" alt="Villa Moderne">
+                <div class="project-overlay">
+                    <h3>Villa Moderne</h3>
+                    <p>Architecture résidentielle</p>
+                </div>
+            </div>
+            <div class="project-card">
+                <img src="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?q=80&w=800" alt="Tour Urbaine">
+                <div class="project-overlay">
+                    <h3>Tour Urbaine</h3>
+                    <p>Architecture commerciale</p>
+                </div>
+            </div>
+            <div class="project-card">
+                <img src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?q=80&w=800" alt="Espace Culturel">
+                <div class="project-overlay">
+                    <h3>Espace Culturel</h3>
+                    <p>Architecture publique</p>
+                </div>
+            </div>
+            <div class="project-card">
+                <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=800" alt="Maison Contemporaine">
+                <div class="project-overlay">
+                    <h3>Maison Contemporaine</h3>
+                    <p>Architecture durable</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section - Parallax en Profondeur -->
+    <section id="about">
+        <div class="depth-parallax-bg"></div>
+        <div class="about-content">
+            <h2>Notre Vision</h2>
+            <p>Nous croyons que l'architecture est plus qu'une simple construction. C'est l'art de créer des espaces qui racontent une histoire, qui respectent l'environnement et qui enrichissent la vie des gens. Notre approche combine innovation technologique et sensibilité artistique pour concevoir des projets uniques et durables.</p>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services">
+        <div class="services-bg"></div>
+        <div class="services-content">
+            <h2 class="section-title">Nos Services</h2>
+            <div class="services-grid">
+                <div class="service-item">
+                    <h3>Conception</h3>
+                    <p>De l'esquisse initiale aux plans détaillés, nous donnons vie à vos idées avec créativité et précision.</p>
+                </div>
+                <div class="service-item">
+                    <h3>Rénovation</h3>
+                    <p>Transformation d'espaces existants en respectant leur caractère tout en les modernisant.</p>
+                </div>
+                <div class="service-item">
+                    <h3>Architecture Durable</h3>
+                    <p>Solutions écologiques et durables pour un avenir respectueux de l'environnement.</p>
+                </div>
+                <div class="service-item">
+                    <h3>Consultation</h3>
+                    <p>Expertise et conseils professionnels pour tous vos projets architecturaux.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact">
+        <div class="contact-content">
+            <h2 class="section-title">Contactez-Nous</h2>
+            <div class="contact-info">
+                <p>Email: <a href="mailto:contact@architect.com">contact@architect.com</a></p>
+                <p>Téléphone: <a href="tel:+33123456789">+33 1 23 45 67 89</a></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-bg"></div>
+        <div class="footer-overlay"></div>
+        <div class="footer-content">
+            <p>CRÉER L'AVENIR DE L'ARCHITECTURE</p>
+            <p class="copyright">© 2025 ARCHITECT. Tous droits réservés.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Navigation scroll effect
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 100) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // Parallax vertical pour Hero
+        const parallaxBg = document.querySelector('.parallax-bg');
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            if (parallaxBg) {
+                parallaxBg.style.transform = `translateY(${scrolled * 0.5}px)`;
+            }
+        });
+
+        // Parallax horizontal pour les projets (scroll + souris)
+        const horizontalWrapper = document.querySelector('.horizontal-scroll-wrapper');
+        const projetsSection = document.getElementById('projets');
+        let mouseScrollOffset = 0;
+        
+        // Contrôle au scroll
+        window.addEventListener('scroll', () => {
+            if (horizontalWrapper && projetsSection) {
+                const rect = projetsSection.getBoundingClientRect();
+                const sectionTop = rect.top;
+                const sectionHeight = rect.height;
+                
+                if (sectionTop < window.innerHeight && sectionTop > -sectionHeight) {
+                    const progress = (window.innerHeight - sectionTop) / (window.innerHeight + sectionHeight);
+                    const maxScroll = horizontalWrapper.scrollWidth - window.innerWidth;
+                    const scrollOffset = progress * maxScroll;
+                    horizontalWrapper.style.transform = `translateX(-${scrollOffset + mouseScrollOffset}px)`;
+                }
+            }
+        });
+
+        // Contrôle à la souris
+        if (projetsSection) {
+            projetsSection.addEventListener('mousemove', (e) => {
+                const rect = projetsSection.getBoundingClientRect();
+                const mouseX = e.clientX;
+                const sectionWidth = rect.width;
+                const mouseProgress = mouseX / sectionWidth;
+                
+                // Calculer le déplacement basé sur la position de la souris
+                const maxMouseScroll = 300; // Amplitude du mouvement
+                mouseScrollOffset = (mouseProgress - 0.5) * maxMouseScroll;
+                
+                // Recalculer la position avec l'offset de la souris
+                const sectionTop = rect.top;
+                const sectionHeight = rect.height;
+                
+                if (sectionTop < window.innerHeight && sectionTop > -sectionHeight) {
+                    const progress = (window.innerHeight - sectionTop) / (window.innerHeight + sectionHeight);
+                    const maxScroll = horizontalWrapper.scrollWidth - window.innerWidth;
+                    const scrollOffset = progress * maxScroll;
+                    horizontalWrapper.style.transform = `translateX(-${scrollOffset + mouseScrollOffset}px)`;
+                }
+            });
+
+            // Réinitialiser quand la souris quitte
+            projetsSection.addEventListener('mouseleave', () => {
+                mouseScrollOffset = 0;
+                const rect = projetsSection.getBoundingClientRect();
+                const sectionTop = rect.top;
+                const sectionHeight = rect.height;
+                
+                if (sectionTop < window.innerHeight && sectionTop > -sectionHeight) {
+                    const progress = (window.innerHeight - sectionTop) / (window.innerHeight + sectionHeight);
+                    const maxScroll = horizontalWrapper.scrollWidth - window.innerWidth;
+                    const scrollOffset = progress * maxScroll;
+                    horizontalWrapper.style.transform = `translateX(-${scrollOffset}px)`;
+                }
+            });
+        }
+
+        // Parallax en profondeur (zoom) pour About
+        const depthBg = document.querySelector('.depth-parallax-bg');
+        const aboutSection = document.getElementById('about');
+        
+        window.addEventListener('scroll', () => {
+            if (depthBg && aboutSection) {
+                const rect = aboutSection.getBoundingClientRect();
+                const sectionTop = rect.top;
+                const sectionHeight = rect.height;
+                
+                if (sectionTop < window.innerHeight && sectionTop > -sectionHeight) {
+                    const progress = 1 - (sectionTop / window.innerHeight);
+                    const scale = 1.5 - (progress * 0.3);
+                    depthBg.style.transform = `translate(-50%, -50%) scale(${scale})`;
+                }
+            }
+        });
+
+        // Parallax simple pour la section Services
+        window.addEventListener('scroll', () => {
+            const servicesSection = document.getElementById('services');
+            const servicesBg = document.querySelector('.services-bg');
+            
+            if (servicesSection && servicesBg) {
+                const rect = servicesSection.getBoundingClientRect();
+                const scrolled = window.pageYOffset;
+                const rate = scrolled * -0.5;
+                
+                // Appliquer le parallax seulement si la section est visible
+                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                    servicesBg.style.transform = `translateY(${rate}px)`;
+                }
+            }
+        });
+
+        const observerOptions = {
+            threshold: 0.2,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        // Observer pour les titres et contenus
+        document.querySelectorAll('.section-title, .about-content, .service-item').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Animation des service items avec délai
+        const serviceItems = document.querySelectorAll('.service-item');
+        serviceItems.forEach((item, index) => {
+            item.style.transitionDelay = `${index * 0.1}s`;
+        });
+
+        // Smooth scroll pour les liens de navigation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

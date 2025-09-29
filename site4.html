@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Croquis Architectural - Dessin Progressif</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f9f8f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        canvas {
+            background: #ffffff;
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="sketch"></canvas>
+    <button id="restartBtn" style="position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #2c2c2c; color: white; border: none; cursor: pointer; font-family: monospace; z-index: 1000;">Redémarrer</button>
+
+    <script>
+        const canvas = document.getElementById('sketch');
+        const ctx = canvas.getContext('2d');
+        
+        // Configuration haute résolution
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const scale = window.devicePixelRatio || 2;
+        
+        canvas.width = width * scale;
+        canvas.height = height * scale;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        ctx.scale(scale, scale);
+        
+        // Vérification de la configuration
+        console.log('Canvas configuré:', {
+            width: canvas.width,
+            height: canvas.height,
+            styleWidth: canvas.style.width,
+            styleHeight: canvas.style.height,
+            scale: scale
+        });
+        
+        // Test immédiat de dessin pour vérifier que le canvas fonctionne
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, width, height);
+        console.log('Canvas prêt et testé');
+        
+        // Centre du canvas
+        const centerX = width / 2;
+        const centerY = height / 2;
+        
+        // État de l'animation
+        let currentLineIndex = 0;
+        let currentLineProgress = 0;
+        const drawnLines = [];
+        
+        // Classe pour dessiner une ligne progressivement
+        class ProgressiveLine {
+            constructor(x1, y1, x2, y2, options = {}) {
+                this.x1 = x1;
+                this.y1 = y1;
+                this.x2 = x2;
+                this.y2 = y2;
+                this.options = options;
+                this.points = [];
+                this.completed = false;
+                
+                // Générer les points avec effet croquis
+                const steps = options.steps || 50;
+                const wobble = options.wobble !== undefined ? options.wobble : 0.3;
+                
+                for (let i = 0; i <= steps; i++) {
+                    const t = i / steps;
+                    const x = x1 + (x2 - x1) * t;
+                    const y = y1 + (y2 - y1) * t;
+                    
+                    // Variation naturelle pour effet main levée
+                    const noise = Math.sin(i * 0.5) * wobble;
+                    const px = x + noise * (Math.random() - 0.5);
+                    const py = y + noise * (Math.random() - 0.5);
+                    
+                    this.points.push({ x: px, y: py });
+                }
+            }
+            
+            draw(progress) {
+                if (progress <= 0) return;
+                
+                const pointsToDraw = Math.floor(this.points.length * Math.min(1, progress));
+                
+                ctx.save();
+                ctx.strokeStyle = this.options.color || '#2c2c2c';
+                ctx.lineWidth = this.options.weight || 1.5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.globalAlpha = this.options.opacity || 1;
+                
+                if (this.options.dash) {
+                    ctx.setLineDash(this.options.dash);
+                }
+                
+                ctx.beginPath();
+                if (pointsToDraw > 0) {
+                    ctx.moveTo(this.points[0].x, this.points[0].y);
+                    for (let i = 1; i < pointsToDraw; i++) {
+                        ctx.lineTo(this.points[i].x, this.points[i].y);
+                    }
+                    
+                    // Ajouter le point en cours de dessin
+                    if (progress < 1 && pointsToDraw < this.points.length) {
+                        const remainingProgress = (progress * this.points.length) - pointsToDraw;
+                        const nextPoint = this.points[pointsToDraw];
+                        const prevPoint = this.points[pointsToDraw - 1];
+                        const currentX = prevPoint.x + (nextPoint.x - prevPoint.x) * remainingProgress;
+                        const currentY = prevPoint.y + (nextPoint.y - prevPoint.y) * remainingProgress;
+                        ctx.lineTo(currentX, currentY);
+                    }
+                }
+                ctx.stroke();
+                
+                // Double trait si demandé
+                if (this.options.double && progress === 1 && Math.random() > 0.5) {
+                    ctx.globalAlpha = (this.options.opacity || 1) * 0.3;
+                    ctx.beginPath();
+                    ctx.moveTo(this.points[0].x + 0.5, this.points[0].y + 0.5);
+                    for (let i = 1; i < this.points.length; i++) {
+                        ctx.lineTo(this.points[i].x + 0.5, this.points[i].y + 0.5);
+                    }
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
+                
+                this.completed = (progress >= 1);
+            }
+        }
+        
+        // Classe pour le texte
+        class ProgressiveText {
+            constructor(text, x, y, options = {}) {
+                this.text = text;
+                this.x = x;
+                this.y = y;
+                this.options = options;
+                this.completed = false;
+            }
+            
+            draw(progress) {
+                if (progress <= 0) return;
+                
+                ctx.save();
+                ctx.font = this.options.font || '11px "Courier New", monospace';
+                ctx.fillStyle = this.options.color || '#2c2c2c';
+                ctx.globalAlpha = (this.options.opacity || 1) * progress;
+                ctx.textAlign = this.options.align || 'center';
+                ctx.textBaseline = this.options.baseline || 'middle';
+                
+                if (this.options.background && progress > 0.5) {
+                    const metrics = ctx.measureText(this.text);
+                    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                    ctx.fillRect(
+                        this.x - metrics.width/2 - 5,
+                        this.y - 8,
+                        metrics.width + 10,
+                        16
+                    );
+                    ctx.fillStyle = this.options.color || '#2c2c2c';
+                }
+                
+                const textToDraw = this.text.substring(0, Math.floor(this.text.length * progress));
+                ctx.fillText(textToDraw, this.x, this.y);
+                ctx.restore();
+                
+                this.completed = (progress >= 1);
+            }
+        }
+        
+        // Classe pour les hachures
+        class Hatching {
+            constructor(x, y, width, height, options = {}) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.options = options;
+                this.lines = [];
+                
+                const spacing = options.spacing || 4;
+                const angle = options.angle || -45;
+                const diagonal = Math.sqrt(width * width + height * height);
+                
+                for (let i = -diagonal/2; i < diagonal/2; i += spacing) {
+                    const lineAngle = angle * Math.PI / 180;
+                    const cos = Math.cos(lineAngle);
+                    const sin = Math.sin(lineAngle);
+                    
+                    const x1 = x + width/2 + i * cos - diagonal/2 * sin;
+                    const y1 = y + height/2 + i * sin + diagonal/2 * cos;
+                    const x2 = x + width/2 + i * cos + diagonal/2 * sin;
+                    const y2 = y + height/2 + i * sin - diagonal/2 * cos;
+                    
+                    // Clipper aux limites du rectangle
+                    this.lines.push({
+                        x1: Math.max(x, Math.min(x + width, x1)),
+                        y1: Math.max(y, Math.min(y + height, y1)),
+                        x2: Math.max(x, Math.min(x + width, x2)),
+                        y2: Math.max(y, Math.min(y + height, y2))
+                    });
+                }
+                this.completed = false;
+            }
+            
+            draw(progress) {
+                if (progress <= 0) return;
+                
+                const linesToDraw = Math.floor(this.lines.length * progress);
+                
+                ctx.save();
+                ctx.strokeStyle = this.options.color || '#2c2c2c';
+                ctx.lineWidth = 0.5;
+                ctx.globalAlpha = this.options.opacity || 0.3;
+                
+                for (let i = 0; i < linesToDraw; i++) {
+                    const line = this.lines[i];
+                    ctx.beginPath();
+                    ctx.moveTo(line.x1, line.y1);
+                    ctx.lineTo(line.x2, line.y2);
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
+                this.completed = (progress >= 1);
+            }
+        }
+        
+        // Définir tous les éléments à dessiner dans l'ordre
+        const drawingElements = [];
+        
+        // Base du chalet
+        const baseX = centerX - 150;
+        const baseY = centerY + 50;
+        
+        // Phase 1: Éléments visibles immédiatement - DÉBUT RAPIDE
+        // Titre immédiat pour montrer que l'animation démarre
+        drawingElements.push(new ProgressiveText('Dessin en cours...', centerX, 30, {
+            color: '#999',
+            font: '12px monospace',
+            steps: 1
+        }));
+        
+        // Ligne de terrain (visible immédiatement)
+        drawingElements.push(new ProgressiveLine(0, baseY, width, baseY, {
+            weight: 1,
+            opacity: 0.8,
+            steps: 1  // Très rapide
+        }));
+        
+        // Grille de construction (très légère) - DÉBUT IMMÉDIAT
+        for (let x = 0; x < width; x += 50) {
+            drawingElements.push(new ProgressiveLine(x, 0, x, height, {
+                color: '#e0e0e0',
+                weight: 0.2,
+                opacity: 0.15,
+                wobble: 0,
+                steps: 1  // Très rapide pour démarrage immédiat
+            }));
+        }
+        for (let y = 0; y < height; y += 50) {
+            drawingElements.push(new ProgressiveLine(0, y, width, y, {
+                color: '#e0e0e0',
+                weight: 0.2,
+                opacity: 0.15,
+                wobble: 0,
+                steps: 1  // Très rapide pour démarrage immédiat
+            }));
+        }
+        
+        // Points de fuite 3D pour perspective cohérente
+        const vp1 = { x: width * 0.15, y: height * 0.4 };  // Point de fuite gauche
+        const vp2 = { x: width * 0.85, y: height * 0.4 };  // Point de fuite droit
+        const vp3 = { x: width * 0.5, y: height * 0.1 };   // Point de fuite vertical
+        
+        // Lignes de perspective 3D supprimées pour éviter le triangle au début
+        
+        // Annotations points de fuite supprimées pour éviter le triangle
+        
+        // Phase 2: Structure 3D Wireframe - CHALET TRADITIONNEL
+        // Base du chalet - DÉBUT IMMÉDIAT
+        drawingElements.push(new ProgressiveLine(baseX, baseY, baseX + 350, baseY, {
+            weight: 2,
+            double: true,
+            steps: 1  // Très rapide pour démarrage immédiat
+        }));
+        drawingElements.push(new ProgressiveText('14.00 m', centerX, baseY + 25, {
+            color: '#ff0000',
+            font: 'italic 10px monospace'
+        }));
+        
+        // Murs verticaux du chalet
+        drawingElements.push(new ProgressiveLine(baseX, baseY, baseX, baseY - 140, {
+            weight: 2,
+            double: true
+        }));
+        drawingElements.push(new ProgressiveLine(baseX + 350, baseY, baseX + 350, baseY - 140, {
+            weight: 2,
+            double: true
+        }));
+        drawingElements.push(new ProgressiveText('5.50 m', baseX - 30, baseY - 70, {
+            color: '#ff0000',
+            font: 'italic 10px monospace'
+        }));
+        
+        // Ligne de faîtage du chalet (toit en pente)
+        drawingElements.push(new ProgressiveLine(baseX, baseY - 140, centerX + 25, baseY - 240, {
+            weight: 2.5,
+            double: true
+        }));
+        drawingElements.push(new ProgressiveLine(baseX + 350, baseY - 140, centerX + 25, baseY - 240, {
+            weight: 2.5,
+            double: true
+        }));
+        drawingElements.push(new ProgressiveText('Pente 45°', centerX - 30, baseY - 180, {
+            color: '#ff0000',
+            font: 'italic 10px monospace'
+        }));
+        
+        // Structure 3D - Faces arrière cohérentes avec la perspective
+        // Calcul des points arrière selon la perspective
+        const depth = 120; // Profondeur du bâtiment
+        
+        // Points arrière calculés selon les points de fuite
+        const backLeftX = baseX + depth;
+        const backLeftY = baseY - depth;
+        const backRightX = baseX + 400 + depth;
+        const backRightY = baseY - depth;
+        const backTopLeftX = baseX + depth;
+        const backTopLeftY = baseY - 200 - depth;
+        const backTopRightX = baseX + 400 + depth;
+        const backTopRightY = baseY - 200 - depth;
+        
+        // Base arrière
+        drawingElements.push(new ProgressiveLine(backLeftX, backLeftY, backRightX, backRightY, {
+            weight: 1,
+            dash: [5, 5],
+            opacity: 0.6
+        }));
+        
+        // Murs arrière
+        drawingElements.push(new ProgressiveLine(backLeftX, backLeftY, backTopLeftX, backTopLeftY, {
+            weight: 1,
+            dash: [5, 5],
+            opacity: 0.6
+        }));
+        drawingElements.push(new ProgressiveLine(backRightX, backRightY, backTopRightX, backTopRightY, {
+            weight: 1,
+            dash: [5, 5],
+            opacity: 0.6
+        }));
+        
+        // Ligne de faîtage arrière
+        drawingElements.push(new ProgressiveLine(backTopLeftX, backTopLeftY, backTopRightX, backTopRightY, {
+            weight: 1,
+            dash: [5, 5],
+            opacity: 0.6
+        }));
+        
+        // Lignes de connexion 3D (wireframe) - cohérentes avec la perspective
+        drawingElements.push(new ProgressiveLine(baseX, baseY, backLeftX, backLeftY, {
+            weight: 1,
+            dash: [3, 3],
+            opacity: 0.4
+        }));
+        drawingElements.push(new ProgressiveLine(baseX + 400, baseY, backRightX, backRightY, {
+            weight: 1,
+            dash: [3, 3],
+            opacity: 0.4
+        }));
+        drawingElements.push(new ProgressiveLine(baseX, baseY - 200, backTopLeftX, backTopLeftY, {
+            weight: 1,
+            dash: [3, 3],
+            opacity: 0.4
+        }));
+        drawingElements.push(new ProgressiveLine(baseX + 400, baseY - 200, backTopRightX, backTopRightY, {
+            weight: 1,
+            dash: [3, 3],
+            opacity: 0.4
+        }));
+        
+        // Phase 3: AMÉNAGEMENT INTÉRIEUR DU CHALET
+        // Ligne de séparation des étages (mezzanine)
+        const mezzanineY = baseY - 80;
+        drawingElements.push(new ProgressiveLine(baseX, mezzanineY, baseX + 350, mezzanineY, {
+            weight: 1.5,
+            dash: [5, 3]
+        }));
+        drawingElements.push(new ProgressiveText('MEZZANINE', centerX, mezzanineY - 10, {
+            color: '#666',
+            font: '10px monospace'
+        }));
+        
+        // REZ-DE-CHAUSSÉE
+        // Salon (gauche)
+        drawingElements.push(new ProgressiveLine(baseX, baseY, baseX + 140, baseY, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(baseX + 140, baseY, baseX + 140, mezzanineY, { 
+            weight: 1,
+            dash: [3, 2]
+        }));
+        drawingElements.push(new ProgressiveText('SALON', baseX + 70, baseY - 30, {
+            color: '#333',
+            font: '11px monospace'
+        }));
+        
+        // Cuisine (centre)
+        drawingElements.push(new ProgressiveLine(baseX + 140, baseY, baseX + 230, baseY, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(baseX + 230, baseY, baseX + 230, mezzanineY, { 
+            weight: 1,
+            dash: [3, 2]
+        }));
+        drawingElements.push(new ProgressiveText('CUISINE', baseX + 185, baseY - 30, {
+            color: '#333',
+            font: '11px monospace'
+        }));
+        
+        // Salle de bain (droite)
+        drawingElements.push(new ProgressiveLine(baseX + 230, baseY, baseX + 350, baseY, { weight: 1 }));
+        drawingElements.push(new ProgressiveText('DOUCHE/WC', baseX + 290, baseY - 30, {
+            color: '#333',
+            font: '11px monospace'
+        }));
+        
+        // ÉTAGE - Chambres sur la mezzanine
+        // Chambre 1 (gauche)
+        drawingElements.push(new ProgressiveLine(baseX, mezzanineY, baseX + 175, mezzanineY, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(baseX + 175, mezzanineY, baseX + 175, baseY - 140, { 
+            weight: 1,
+            dash: [3, 2]
+        }));
+        drawingElements.push(new ProgressiveText('CHAMBRE 1', baseX + 85, mezzanineY - 30, {
+            color: '#333',
+            font: '11px monospace'
+        }));
+        
+        // Chambre 2 (droite)
+        drawingElements.push(new ProgressiveLine(baseX + 175, mezzanineY, baseX + 350, mezzanineY, { weight: 1 }));
+        drawingElements.push(new ProgressiveText('CHAMBRE 2', baseX + 260, mezzanineY - 30, {
+            color: '#333',
+            font: '11px monospace'
+        }));
+        
+        // PORCHE EXTÉRIEUR
+        const porcheX = baseX - 80;
+        drawingElements.push(new ProgressiveLine(porcheX, baseY, baseX, baseY, {
+            weight: 2
+        }));
+        drawingElements.push(new ProgressiveLine(porcheX, baseY, porcheX, baseY - 100, {
+            weight: 2
+        }));
+        drawingElements.push(new ProgressiveLine(porcheX, baseY - 100, baseX, baseY - 140, {
+            weight: 2
+        }));
+        drawingElements.push(new ProgressiveText('PORCHE', porcheX + 40, baseY - 50, {
+            color: '#666',
+            font: '10px monospace'
+        }));
+        
+        // Phase 4: DÉTAILS ARCHITECTURAUX DU CHALET
+        // Fenêtres traditionnelles du chalet
+        
+        // Fenêtres du salon (rez-de-chaussée)
+        const winSalonY = baseY - 50;
+        drawingElements.push(new ProgressiveLine(baseX + 30, winSalonY, baseX + 70, winSalonY, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(baseX + 30, winSalonY, baseX + 30, winSalonY + 30, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(baseX + 70, winSalonY, baseX + 70, winSalonY + 30, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(baseX + 30, winSalonY + 30, baseX + 70, winSalonY + 30, { weight: 1.5 }));
+        // Croisillons
+        drawingElements.push(new ProgressiveLine(baseX + 50, winSalonY, baseX + 50, winSalonY + 30, { weight: 0.8 }));
+        drawingElements.push(new ProgressiveLine(baseX + 30, winSalonY + 15, baseX + 70, winSalonY + 15, { weight: 0.8 }));
+        
+        // Fenêtre de la cuisine
+        const winCuisineY = baseY - 50;
+        drawingElements.push(new ProgressiveLine(baseX + 160, winCuisineY, baseX + 210, winCuisineY, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(baseX + 160, winCuisineY, baseX + 160, winCuisineY + 30, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(baseX + 210, winCuisineY, baseX + 210, winCuisineY + 30, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(baseX + 160, winCuisineY + 30, baseX + 210, winCuisineY + 30, { weight: 1.5 }));
+        // Croisillons
+        drawingElements.push(new ProgressiveLine(baseX + 185, winCuisineY, baseX + 185, winCuisineY + 30, { weight: 0.8 }));
+        drawingElements.push(new ProgressiveLine(baseX + 160, winCuisineY + 15, baseX + 210, winCuisineY + 15, { weight: 0.8 }));
+        
+        // Fenêtres des chambres (mezzanine)
+        const winChambresY = mezzanineY - 40;
+        // Chambre 1
+        drawingElements.push(new ProgressiveLine(baseX + 50, winChambresY, baseX + 90, winChambresY, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(baseX + 50, winChambresY, baseX + 50, winChambresY + 25, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(baseX + 90, winChambresY, baseX + 90, winChambresY + 25, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(baseX + 50, winChambresY + 25, baseX + 90, winChambresY + 25, { weight: 1.5 }));
+        
+        // Chambre 2
+        drawingElements.push(new ProgressiveLine(baseX + 260, winChambresY, baseX + 300, winChambresY, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(baseX + 260, winChambresY, baseX + 260, winChambresY + 25, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(baseX + 300, winChambresY, baseX + 300, winChambresY + 25, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(baseX + 260, winChambresY + 25, baseX + 300, winChambresY + 25, { weight: 1.5 }));
+        
+        // Fenêtres en perspective 3D cohérentes
+        const winDepth = 60;
+        const winY = baseY - 100; // Définition de winY pour la perspective
+        
+        // Calcul des points arrière pour les fenêtres selon la perspective
+        const winBackLeftX = baseX + 50 + winDepth;
+        const winBackLeftY = winY - winDepth;
+        const winBackRightX = baseX + 350 + winDepth;
+        const winBackRightY = winY - winDepth;
+        const winBackTopLeftX = baseX + 50 + winDepth;
+        const winBackTopLeftY = winY + 60 - winDepth;
+        const winBackTopRightX = baseX + 350 + winDepth;
+        const winBackTopRightY = winY + 60 - winDepth;
+        
+        // Bandeau supérieur - face latérale
+        drawingElements.push(new ProgressiveLine(winBackLeftX, winBackLeftY, winBackRightX, winBackRightY, {
+            weight: 1,
+            dash: [4, 4],
+            opacity: 0.5
+        }));
+        drawingElements.push(new ProgressiveLine(winBackLeftX, winBackLeftY, winBackTopLeftX, winBackTopLeftY, {
+            weight: 1,
+            dash: [4, 4],
+            opacity: 0.5
+        }));
+        drawingElements.push(new ProgressiveLine(winBackRightX, winBackRightY, winBackTopRightX, winBackTopRightY, {
+            weight: 1,
+            dash: [4, 4],
+            opacity: 0.5
+        }));
+        drawingElements.push(new ProgressiveLine(winBackTopLeftX, winBackTopLeftY, winBackTopRightX, winBackTopRightY, {
+            weight: 1,
+            dash: [4, 4],
+            opacity: 0.5
+        }));
+        
+        // Lignes de connexion 3D pour les fenêtres - cohérentes avec la perspective
+        drawingElements.push(new ProgressiveLine(baseX + 50, winY, winBackLeftX, winBackLeftY, {
+            weight: 0.8,
+            dash: [2, 2],
+            opacity: 0.3
+        }));
+        drawingElements.push(new ProgressiveLine(baseX + 350, winY, winBackRightX, winBackRightY, {
+            weight: 0.8,
+            dash: [2, 2],
+            opacity: 0.3
+        }));
+        drawingElements.push(new ProgressiveLine(baseX + 50, winY + 60, winBackTopLeftX, winBackTopLeftY, {
+            weight: 0.8,
+            dash: [2, 2],
+            opacity: 0.3
+        }));
+        drawingElements.push(new ProgressiveLine(baseX + 350, winY + 60, winBackTopRightX, winBackTopRightY, {
+            weight: 0.8,
+            dash: [2, 2],
+            opacity: 0.3
+        }));
+        
+        // Porte d'entrée du chalet
+        drawingElements.push(new ProgressiveLine(baseX + 90, baseY, baseX + 120, baseY, { weight: 2 }));
+        drawingElements.push(new ProgressiveLine(baseX + 90, baseY, baseX + 90, baseY - 45, { weight: 2 }));
+        drawingElements.push(new ProgressiveLine(baseX + 120, baseY, baseX + 120, baseY - 45, { weight: 2 }));
+        drawingElements.push(new ProgressiveLine(baseX + 90, baseY - 45, baseX + 120, baseY - 45, { weight: 2 }));
+        // Poignée
+        drawingElements.push(new ProgressiveLine(baseX + 110, baseY - 22, baseX + 115, baseY - 22, { weight: 1 }));
+        drawingElements.push(new ProgressiveText('ENTRÉE', baseX + 105, baseY - 55, {
+            color: '#666',
+            font: '9px monospace'
+        }));
+        
+        // Cheminée
+        const chemX = centerX - 20;
+        const chemY = baseY - 240;
+        drawingElements.push(new ProgressiveLine(chemX, chemY, chemX, chemY - 30, { weight: 2.5 }));
+        drawingElements.push(new ProgressiveLine(chemX + 20, chemY, chemX + 20, chemY - 30, { weight: 2.5 }));
+        drawingElements.push(new ProgressiveLine(chemX, chemY - 30, chemX + 20, chemY - 30, { weight: 2 }));
+        drawingElements.push(new ProgressiveLine(chemX - 3, chemY - 30, chemX + 23, chemY - 30, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveText('CHEMINÉE', chemX + 10, chemY - 40, {
+            color: '#666',
+            font: '8px monospace'
+        }));
+        
+        // ESCALIER vers la mezzanine
+        const escX = baseX + 140;
+        const escY = baseY;
+        for (let i = 0; i < 8; i++) {
+            const y = escY - (i * 10);
+            drawingElements.push(new ProgressiveLine(escX, y, escX + 30, y, { 
+                weight: 1,
+                dash: i % 2 === 0 ? [] : [2, 2]
+            }));
+        }
+        drawingElements.push(new ProgressiveLine(escX, escY, escX, mezzanineY, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(escX + 30, escY, escX + 30, mezzanineY, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveText('ESCALIER', escX + 15, escY - 40, {
+            color: '#666',
+            font: '9px monospace'
+        }));
+        
+        // BALCON sur la mezzanine
+        const balconX = baseX + 350;
+        drawingElements.push(new ProgressiveLine(balconX, mezzanineY, balconX + 50, mezzanineY, { weight: 2 }));
+        drawingElements.push(new ProgressiveLine(balconX + 50, mezzanineY, balconX + 50, mezzanineY - 20, { weight: 2 }));
+        // Garde-corps du balcon
+        for (let i = 0; i < 4; i++) {
+            const x = balconX + (i * 12);
+            drawingElements.push(new ProgressiveLine(x, mezzanineY, x, mezzanineY - 20, { weight: 1 }));
+        }
+        drawingElements.push(new ProgressiveLine(balconX, mezzanineY - 20, balconX + 50, mezzanineY - 20, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveText('BALCON', balconX + 25, mezzanineY - 30, {
+            color: '#666',
+            font: '9px monospace'
+        }));
+        
+        // PIÈCES ANNEXES - GARAGE
+        const garageX = baseX + 400;
+        const garageY = baseY;
+        drawingElements.push(new ProgressiveLine(garageX, garageY, garageX + 80, garageY, { weight: 2 }));
+        drawingElements.push(new ProgressiveLine(garageX, garageY, garageX, garageY - 100, { weight: 2 }));
+        drawingElements.push(new ProgressiveLine(garageX + 80, garageY, garageX + 80, garageY - 100, { weight: 2 }));
+        drawingElements.push(new ProgressiveLine(garageX, garageY - 100, garageX + 80, garageY - 100, { weight: 2 }));
+        // Porte de garage
+        drawingElements.push(new ProgressiveLine(garageX + 20, garageY, garageX + 60, garageY, { 
+            weight: 1.5,
+            dash: [3, 3]
+        }));
+        drawingElements.push(new ProgressiveText('GARAGE', garageX + 40, garageY - 50, {
+            color: '#666',
+            font: '10px monospace'
+        }));
+        
+        // CAVE/CELLIER
+        const caveX = baseX - 100;
+        const caveY = baseY;
+        drawingElements.push(new ProgressiveLine(caveX, caveY, caveX + 60, caveY, { weight: 2 }));
+        drawingElements.push(new ProgressiveLine(caveX, caveY, caveX, caveY - 80, { weight: 2 }));
+        drawingElements.push(new ProgressiveLine(caveX + 60, caveY, caveX + 60, caveY - 80, { weight: 2 }));
+        drawingElements.push(new ProgressiveLine(caveX, caveY - 80, caveX + 60, caveY - 80, { weight: 2 }));
+        drawingElements.push(new ProgressiveText('CAVE', caveX + 30, caveY - 40, {
+            color: '#666',
+            font: '10px monospace'
+        }));
+        
+        // BUANDERIE
+        const buanderieX = baseX + 300;
+        const buanderieY = baseY - 20;
+        drawingElements.push(new ProgressiveLine(buanderieX, buanderieY, buanderieX + 50, buanderieY, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(buanderieX, buanderieY, buanderieX, buanderieY - 40, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(buanderieX + 50, buanderieY, buanderieX + 50, buanderieY - 40, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveLine(buanderieX, buanderieY - 40, buanderieX + 50, buanderieY - 40, { weight: 1.5 }));
+        drawingElements.push(new ProgressiveText('BUANDERIE', buanderieX + 25, buanderieY - 20, {
+            color: '#666',
+            font: '9px monospace'
+        }));
+        
+        // Phase 5: DÉTAILS ARCHITECTURAUX FINAUX
+        // Bardage bois du chalet
+        for (let i = 0; i < 15; i++) {
+            const y = baseY - 120 + (i * 8);
+            drawingElements.push(new ProgressiveLine(baseX, y, baseX + 350, y, {
+                weight: 0.5,
+                opacity: 0.4,
+                wobble: 0.2
+            }));
+        }
+        
+        // Tuiles du toit
+        for (let i = 0; i < 8; i++) {
+            const x = baseX + (i * 45);
+            drawingElements.push(new ProgressiveLine(x, baseY - 140, x + 20, baseY - 240, {
+                weight: 0.3,
+                opacity: 0.3
+            }));
+        }
+        
+        // Hachures et ombrages
+        drawingElements.push(new Hatching(centerX, baseY - 170, 150, 60, {
+            spacing: 3,
+            angle: -30,
+            opacity: 0.4
+        }));
+        drawingElements.push(new Hatching(baseX, baseY - 120, 80, 120, {
+            spacing: 4,
+            angle: 90,
+            opacity: 0.3
+        }));
+        
+        // Ombres portées
+        drawingElements.push(new Hatching(baseX + 400, baseY, 80, 100, {
+            spacing: 2,
+            angle: 45,
+            opacity: 0.2
+        }));
+        
+        // Bardage bois
+        for (let i = 0; i < 12; i++) {
+            const y = baseY - 110 + (i * 8);
+            drawingElements.push(new ProgressiveLine(baseX + 200, y, baseX + 280, y, {
+                weight: 0.5,
+                opacity: 0.6,
+                wobble: 0.1
+            }));
+        }
+        
+        // Phase 6: ENVIRONNEMENT ET FINALISATION
+        // Ligne de terrain
+        drawingElements.push(new ProgressiveLine(0, baseY, width, baseY, {
+            weight: 1,
+            opacity: 0.5
+        }));
+        
+        // VÉGÉTATION ET PAYSAGE
+        // Arbres autour du chalet
+        const tree1X = baseX - 150;
+        const tree1Y = baseY - 20;
+        drawingElements.push(new ProgressiveLine(tree1X, tree1Y, tree1X, tree1Y - 60, { weight: 2 }));
+        // Feuillage
+        for (let angle = 0; angle < Math.PI * 2; angle += 0.5) {
+            const r = 25;
+            const x1 = tree1X + Math.cos(angle) * r;
+            const y1 = tree1Y - 40 + Math.sin(angle) * r * 0.7;
+            const x2 = tree1X + Math.cos(angle + 0.3) * r;
+            const y2 = tree1Y - 40 + Math.sin(angle + 0.3) * r * 0.7;
+            drawingElements.push(new ProgressiveLine(x1, y1, x2, y2, {
+                weight: 0.5,
+                opacity: 0.4
+            }));
+        }
+        
+        // Arbre 2
+        const tree2X = baseX + 500;
+        const tree2Y = baseY - 10;
+        drawingElements.push(new ProgressiveLine(tree2X, tree2Y, tree2X, tree2Y - 70, { weight: 2.5 }));
+        // Feuillage conifère
+        drawingElements.push(new ProgressiveLine(tree2X - 30, tree2Y - 20, tree2X, tree2Y - 70, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(tree2X + 30, tree2Y - 20, tree2X, tree2Y - 70, { weight: 1 }));
+        
+        // MASSIFS DE FLEURS
+        const flowerX = baseX + 50;
+        const flowerY = baseY - 10;
+        for (let i = 0; i < 5; i++) {
+            const x = flowerX + (i * 15);
+            drawingElements.push(new ProgressiveLine(x, flowerY, x, flowerY - 8, { weight: 0.5 }));
+            // Petites fleurs
+            drawingElements.push(new ProgressiveLine(x - 2, flowerY - 4, x + 2, flowerY - 4, { weight: 0.3 }));
+            drawingElements.push(new ProgressiveLine(x, flowerY - 2, x, flowerY - 6, { weight: 0.3 }));
+        }
+        
+        // Montagnes en arrière-plan
+        drawingElements.push(new ProgressiveLine(0, centerY - 50, width * 0.2, centerY - 180, {
+            color: '#8090a0',
+            weight: 1.5,
+            opacity: 0.2
+        }));
+        drawingElements.push(new ProgressiveLine(width * 0.2, centerY - 180, width * 0.35, centerY - 120, {
+            color: '#8090a0',
+            weight: 1.5,
+            opacity: 0.2
+        }));
+        drawingElements.push(new ProgressiveLine(width * 0.35, centerY - 120, width * 0.5, centerY - 200, {
+            color: '#8090a0',
+            weight: 1.5,
+            opacity: 0.2
+        }));
+        drawingElements.push(new ProgressiveLine(width * 0.5, centerY - 200, width * 0.7, centerY - 150, {
+            color: '#8090a0',
+            weight: 1.5,
+            opacity: 0.2
+        }));
+        drawingElements.push(new ProgressiveLine(width * 0.7, centerY - 150, width * 0.85, centerY - 190, {
+            color: '#8090a0',
+            weight: 1.5,
+            opacity: 0.2
+        }));
+        drawingElements.push(new ProgressiveLine(width * 0.85, centerY - 190, width, centerY - 100, {
+            color: '#8090a0',
+            weight: 1.5,
+            opacity: 0.2
+        }));
+        
+        // Phase 7: Annotations finales
+        drawingElements.push(new ProgressiveText('CHALET DUPLEX - VUE EN PERSPECTIVE 3D', centerX, 50, {
+            font: 'bold 14px "Courier New", monospace',
+            color: '#2c2c2c'
+        }));
+        drawingElements.push(new ProgressiveText('Échelle 1:100', centerX - 200, height - 50, {
+            font: '11px monospace',
+            color: '#666'
+        }));
+        drawingElements.push(new ProgressiveText('Surface habitable: 150 m² sur 2 niveaux + annexes', centerX, height - 50, {
+            font: '11px monospace',
+            color: '#666'
+        }));
+        drawingElements.push(new ProgressiveText('RDC: Salon, Cuisine, Douche/WC, Buanderie | Étage: 2 Chambres, Balcon', centerX, height - 30, {
+            font: '10px monospace',
+            color: '#666'
+        }));
+        drawingElements.push(new ProgressiveText('Annexes: Garage, Cave, Porche | Escalier intérieur', centerX, height - 10, {
+            font: '10px monospace',
+            color: '#666'
+        }));
+        
+        const date = new Date().toLocaleDateString('fr-FR');
+        drawingElements.push(new ProgressiveText(date, centerX + 200, height - 50, {
+            font: '11px monospace',
+            color: '#666'
+        }));
+        
+        // Cartouche
+        const cartX = width - 200;
+        const cartY = height - 120;
+        
+        drawingElements.push(new ProgressiveLine(cartX, cartY, cartX + 180, cartY, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(cartX + 180, cartY, cartX + 180, cartY + 80, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(cartX + 180, cartY + 80, cartX, cartY + 80, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(cartX, cartY + 80, cartX, cartY, { weight: 1 }));
+        
+        drawingElements.push(new ProgressiveText('PROJET: Chalet Duplex', cartX + 90, cartY + 20, {
+            font: '10px monospace',
+            align: 'center'
+        }));
+        drawingElements.push(new ProgressiveText('TYPE: Habitation familiale', cartX + 90, cartY + 40, {
+            font: '10px monospace',
+            align: 'center'
+        }));
+        drawingElements.push(new ProgressiveText('PHASE: Plan détaillé complet', cartX + 90, cartY + 60, {
+            font: '10px monospace',
+            align: 'center'
+        }));
+        
+        // DÉTAILS FINAUX - ÉLÉMENTS TECHNIQUES
+        // Compteur électrique
+        const elecX = baseX + 320;
+        const elecY = baseY - 15;
+        drawingElements.push(new ProgressiveLine(elecX, elecY, elecX + 15, elecY, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(elecX, elecY, elecX, elecY - 20, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(elecX + 15, elecY, elecX + 15, elecY - 20, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(elecX, elecY - 20, elecX + 15, elecY - 20, { weight: 1 }));
+        drawingElements.push(new ProgressiveText('ÉLEC', elecX + 7, elecY - 10, {
+            color: '#999',
+            font: '7px monospace'
+        }));
+        
+        // Compteur d'eau
+        const waterX = baseX + 280;
+        const waterY = baseY - 15;
+        drawingElements.push(new ProgressiveLine(waterX, waterY, waterX + 15, waterY, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(waterX, waterY, waterX, waterY - 20, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(waterX + 15, waterY, waterX + 15, waterY - 20, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(waterX, waterY - 20, waterX + 15, waterY - 20, { weight: 1 }));
+        drawingElements.push(new ProgressiveText('EAU', waterX + 5, waterY - 10, {
+            color: '#999',
+            font: '7px monospace'
+        }));
+        
+        // Antenne TV
+        const antenneX = centerX + 30;
+        const antenneY = baseY - 240;
+        drawingElements.push(new ProgressiveLine(antenneX, antenneY, antenneX, antenneY - 15, { weight: 1 }));
+        drawingElements.push(new ProgressiveLine(antenneX - 3, antenneY - 10, antenneX + 3, antenneY - 10, { weight: 0.5 }));
+        drawingElements.push(new ProgressiveLine(antenneX - 2, antenneY - 5, antenneX + 2, antenneY - 5, { weight: 0.5 }));
+        
+        // FINALISATION - Message de fin
+        drawingElements.push(new ProgressiveText('✓ DESSIN TERMINÉ', centerX, 100, {
+            color: '#2c2c2c',
+            font: 'bold 16px monospace'
+        }));
+        
+        // Animation principale
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            
+            // Indicateur de progression
+            if (currentLineIndex < drawingElements.length) {
+                ctx.save();
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.fillRect(10, 10, 200, 20);
+                ctx.fillStyle = '#2c2c2c';
+                ctx.font = '12px monospace';
+                ctx.fillText(`Progression: ${currentLineIndex + 1}/${drawingElements.length}`, 15, 25);
+                ctx.restore();
+            }
+            
+            // Dessiner tous les éléments complétés
+            for (let i = 0; i < currentLineIndex; i++) {
+                drawingElements[i].draw(1);
+            }
+            
+            // Dessiner l'élément en cours
+            if (currentLineIndex < drawingElements.length) {
+                drawingElements[currentLineIndex].draw(currentLineProgress);
+                
+                // Vitesse variable selon le type d'élément
+                let speed = 0.05; // Vitesse par défaut
+                
+                if (drawingElements[currentLineIndex] instanceof ProgressiveText) {
+                    speed = 0.15; // Texte plus rapide
+                } else if (drawingElements[currentLineIndex] instanceof Hatching) {
+                    speed = 0.08; // Hachures moyennes
+                } else if (drawingElements[currentLineIndex].options.weight > 2) {
+                    speed = 0.03; // Lignes épaisses plus lentes
+                } else if (drawingElements[currentLineIndex].options.opacity < 0.3) {
+                    speed = 0.1; // Lignes légères plus rapides
+                }
+                
+                currentLineProgress += speed;
+                
+                if (currentLineProgress >= 1) {
+                    currentLineProgress = 0;
+                    currentLineIndex++;
+                    
+                    if (currentLineIndex >= drawingElements.length) {
+                        // Pause avant de recommencer
+                        setTimeout(() => {
+                            currentLineIndex = 0;
+                            currentLineProgress = 0;
+                        }, 3000);
+                    }
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Fonction pour redémarrer l'animation
+        function restartAnimation() {
+            currentLineIndex = 0;
+            currentLineProgress = 0;
+            console.log('Animation redémarrée');
+        }
+        
+        // Bouton de redémarrage
+        document.getElementById('restartBtn').addEventListener('click', restartAnimation);
+        
+        // Démarrer l'animation IMMÉDIATEMENT au chargement
+        console.log('Démarrage de l\'animation architecturale...');
+        console.log('Nombre d\'éléments à dessiner:', drawingElements.length);
+        
+        // Forcer le démarrage immédiat de l'animation
+        window.addEventListener('load', function() {
+            animate();
+        });
+        
+        // Démarrage immédiat aussi sans attendre le load complet
+        animate();
+    </script>
+</body>
+</html>
